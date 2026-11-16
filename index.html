@@ -41,6 +41,7 @@
   #app.view-mode .el.sel { outline: none !important; }
   #app.view-mode .rh { display: none !important; }
   #app.view-mode .sbadge { display: none !important; }
+  #app.view-mode .el-frame iframe { pointer-events: auto !important; }
   #view-nav { display: none; align-items: center; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); }
 
   /* APP */
@@ -1024,7 +1025,9 @@ function buildDiv(el) {
       iframe.setAttribute('scrolling', 'no');
       // Explicit pixel size — sets the iframe's own viewport correctly
       iframe.style.cssText = `width:${el.w}px;height:${el.h}px;border:none;display:block;pointer-events:none;`;
-      iframe.src = URL.createObjectURL(new Blob([wrapHtml(el.html, el.w, el.h)], { type:'text/html' }));
+      const wrapped = wrapHtml(el.html, el.w, el.h);
+      iframe.srcdoc = wrapped;
+      iframe.src = URL.createObjectURL(new Blob([wrapped], { type:'text/html' }));
       fi.appendChild(iframe);
       d.appendChild(fi);
     } else {

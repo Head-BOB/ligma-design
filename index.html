@@ -31,6 +31,18 @@
   #login-screen button:hover{opacity:.85;}
   #login-error{color:#ff5555;font-size:13px;min-height:16px;}
 
+  /* PRESENTATION / CLIENT VIEW MODE */
+  #app.view-mode #left,
+  #app.view-mode #right,
+  #app.view-mode .edit-only,
+  #app.view-mode #tb-title { display: none !important; }
+  #app.view-mode #view-nav { display: flex !important; }
+  #app.view-mode .el { cursor: default !important; }
+  #app.view-mode .el.sel { outline: none !important; }
+  #app.view-mode .rh { display: none !important; }
+  #app.view-mode .sbadge { display: none !important; }
+  #view-nav { display: none; align-items: center; gap: 8px; position: absolute; left: 50%; transform: translateX(-50%); }
+
   /* APP */
   #app{display:none;height:100vh;flex-direction:column;}
   #app.on{display:flex;}
@@ -260,58 +272,70 @@
     </svg>
 
     <!-- Tools -->
-    <button class="tb on" data-tool="select" data-tip="Select (V)">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M1 1l9.5 5.5-4.2 1.2L5 13z"/></svg>
-    </button>
-    <div class="tsep"></div>
-    <button class="tb" data-tool="frame" data-tip="Frame (F)">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
-        <rect x="1.5" y="1.5" width="11" height="11" rx="1"/><line x1="1.5" y1="4.5" x2="12.5" y2="4.5"/>
-        <line x1="4.5" y1="1.5" x2="4.5" y2="12.5"/>
-      </svg>
-    </button>
-    <button class="tb" data-tool="rect" data-tip="Rectangle (R)">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5"/></svg>
-    </button>
-    <button class="tb" data-tool="ellipse" data-tip="Ellipse (E)">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="7" cy="7" rx="5.5" ry="5.5"/></svg>
-    </button>
-    <button class="tb" data-tool="text" data-tip="Text (T)">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><text x="2" y="12" font-size="13" font-weight="bold" font-family="serif">T</text></svg>
-    </button>
-    <button class="tb" data-tool="sticky" data-tip="Sticky (S)">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
-        <rect x="1.5" y="1.5" width="11" height="11" rx="1.5"/>
-        <path d="M8.5 1.5v3.5h3.5" stroke-linecap="round"/>
-        <path d="M8.5 1.5l3.5 3.5" stroke-linecap="round"/>
-      </svg>
-    </button>
-    <button class="tb" data-tool="connect" data-tip="Connect (C)">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
-        <circle cx="3" cy="11" r="1.8"/><circle cx="11" cy="3" r="1.8"/>
-        <line x1="4.3" y1="9.7" x2="9.7" y2="4.3"/>
-        <polygon points="9.7,4.3 7.2,4.3 9.7,6.8" fill="currentColor" stroke="none"/>
-      </svg>
-    </button>
+    <div class="edit-only" style="display:flex;align-items:center;gap:2px">
+      <button class="tb on" data-tool="select" data-tip="Select (V)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><path d="M1 1l9.5 5.5-4.2 1.2L5 13z"/></svg>
+      </button>
+      <div class="tsep"></div>
+      <button class="tb" data-tool="frame" data-tip="Frame (F)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="1.5" y="1.5" width="11" height="11" rx="1"/><line x1="1.5" y1="4.5" x2="12.5" y2="4.5"/>
+          <line x1="4.5" y1="1.5" x2="4.5" y2="12.5"/>
+        </svg>
+      </button>
+      <button class="tb" data-tool="rect" data-tip="Rectangle (R)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="11" height="11" rx="1.5"/></svg>
+      </button>
+      <button class="tb" data-tool="ellipse" data-tip="Ellipse (E)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="7" cy="7" rx="5.5" ry="5.5"/></svg>
+      </button>
+      <button class="tb" data-tool="text" data-tip="Text (T)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><text x="2" y="12" font-size="13" font-weight="bold" font-family="serif">T</text></svg>
+      </button>
+      <button class="tb" data-tool="sticky" data-tip="Sticky (S)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
+          <rect x="1.5" y="1.5" width="11" height="11" rx="1.5"/>
+          <path d="M8.5 1.5v3.5h3.5" stroke-linecap="round"/>
+          <path d="M8.5 1.5l3.5 3.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="tb" data-tool="connect" data-tip="Connect (C)">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
+          <circle cx="3" cy="11" r="1.8"/><circle cx="11" cy="3" r="1.8"/>
+          <line x1="4.3" y1="9.7" x2="9.7" y2="4.3"/>
+          <polygon points="9.7,4.3 7.2,4.3 9.7,6.8" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
+    </div>
 
     <!-- Title (center) -->
     <div id="tb-title" onclick="openSettings()">Ligma <em>Design</em></div>
 
+    <!-- View Mode Screen Navigator (center) -->
+    <div id="view-nav">
+      <button class="btn" onclick="prevScreen()">◀</button>
+      <span id="screen-info">Screen 1 of 1</span>
+      <button class="btn" onclick="nextScreen()">▶</button>
+    </div>
+
     <!-- Right side -->
     <div class="tb-r">
+      <button class="btn" id="present-btn" onclick="togglePresentMode()">▶ Present</button>
+      <button class="btn p edit-only" onclick="openShareModal()">Share</button>
+      <div class="tsep edit-only"></div>
       <!-- Multiplayer -->
-      <div id="mp-pill" onclick="openMpModal()">
+      <div id="mp-pill" class="edit-only" onclick="openMpModal()">
         <div class="mp-dot"></div>
         <span id="mp-label">Multiplayer</span>
       </div>
-      <div id="peer-avatars"></div>
+      <div id="peer-avatars" class="edit-only"></div>
       <div class="tsep"></div>
       <span id="zoom-lbl" onclick="promptZoom()">100%</span>
       <button class="btn" onclick="zoomFit()">Fit</button>
-      <div class="tsep"></div>
-      <button class="btn" onclick="saveProject()">Save</button>
-      <button class="btn p" onclick="showExportModal()">Export</button>
-      <button class="tb" data-tip="Settings" onclick="openSettings()">
+      <div class="tsep edit-only"></div>
+      <button class="btn edit-only" onclick="saveProject()">Save</button>
+      <button class="btn edit-only" onclick="showExportModal()">Export</button>
+      <button class="tb edit-only" data-tip="Settings" onclick="openSettings()">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
           <circle cx="7" cy="7" r="2.5"/>
           <path d="M7 1v2M7 11v2M1 7h2M11 7h2M2.9 2.9l1.4 1.4M9.7 9.7l1.4 1.4M2.9 11.1l1.4-1.4M9.7 4.3l1.4-1.4"/>
@@ -471,6 +495,35 @@
   </div>
 </div>
 
+<!-- Share Modal -->
+<div id="share-modal" class="mb" style="display:none">
+  <div class="mo" style="width:480px">
+    <h2>Share with Client</h2>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:16px;line-height:1.5">
+      Share an interactive, clean presentation view of your designs with your client or team. Password protection is bypassed for view-only mode.
+    </p>
+
+    <div style="margin-bottom:14px;background:var(--panel2);padding:12px;border-radius:8px;border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px;color:var(--text)">1. Live Interactive Link (View-Only)</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.4">Opens Ligma Design in full presentation mode without editor chrome. If Multiplayer is active, your client follows your screen navigations and sees your live pointer in real-time.</div>
+      <div style="display:flex;gap:6px">
+        <input id="share-link-input" readonly style="flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;outline:none;" onclick="this.select()">
+        <button class="btn p" onclick="copyClientShareLink()">Copy Link</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;background:var(--panel2);padding:12px;border-radius:8px;border:1px solid var(--border)">
+      <div style="font-size:12px;font-weight:600;margin-bottom:4px;color:var(--text)">2. Standalone Client Presentation (.html)</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.4">Exports an offline-ready single HTML presentation containing all frames, screen transitions, and zoom controls. Can be shared via Slack, WhatsApp, or email and runs directly in any browser.</div>
+      <button class="btn" style="width:100%;justify-content:center" onclick="downloadClientHtml()">Download Standalone Presentation HTML</button>
+    </div>
+
+    <div class="ma">
+      <button class="btn" onclick="closeShareModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -496,6 +549,9 @@ let S = {
 };
 let localName = 'You';
 let localColor = PEER_COLORS[Math.floor(Math.random() * PEER_COLORS.length)];
+let isViewMode = false;
+let isLoggedInStudio = false;
+let currentScreenIdx = 0;
 
 let ui = {
   tool: 'select', selId: null, selConn: null, clipboard: null,
@@ -520,6 +576,7 @@ function attemptLogin() {
   const name = document.getElementById('ln-input').value.trim() || 'Anonymous';
   const pw = document.getElementById('pw-input').value;
   if (pw === getPw()) {
+    isLoggedInStudio = true;
     localName = name;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('on');
@@ -616,6 +673,283 @@ CW.addEventListener('wheel', e => {
   S.camera.zoom = nz;
   renderCamera();
 }, { passive: false });
+
+// ═══════════════════════════════════════════════════
+//  PRESENTATION & CLIENT VIEW MODE
+// ═══════════════════════════════════════════════════
+function getFrames() {
+  return S.elements.filter(e => e.type === 'frame');
+}
+
+function updateScreenInfo() {
+  const frames = getFrames();
+  const info = document.getElementById('screen-info');
+  if (!info) return;
+  if (frames.length === 0) {
+    info.textContent = 'No Screens';
+    return;
+  }
+  if (currentScreenIdx >= frames.length) currentScreenIdx = 0;
+  if (currentScreenIdx < 0) currentScreenIdx = frames.length - 1;
+  const cur = frames[currentScreenIdx];
+  info.textContent = `${cur.label || 'Screen'} (${currentScreenIdx + 1}/${frames.length})`;
+}
+
+function centerOnElement(el) {
+  if (!el) return;
+  const wr = CW.getBoundingClientRect();
+  const pad = 80;
+  const availW = Math.max(100, wr.width - pad * 2);
+  const availH = Math.max(100, wr.height - pad * 2);
+  const scaleX = availW / el.w;
+  const scaleY = availH / el.h;
+  let zoom = Math.min(scaleX, scaleY);
+  zoom = Math.min(Math.max(zoom, 0.2), 1.5);
+  const cx = el.x + el.w / 2;
+  const cy = el.y + el.h / 2;
+  S.camera.zoom = zoom;
+  S.camera.x = (wr.width / 2) - (cx * zoom);
+  S.camera.y = (wr.height / 2) - (cy * zoom);
+  renderCamera();
+}
+
+function focusScreen(idx, shouldBroadcast = true) {
+  const frames = getFrames();
+  if (!frames.length) return;
+  if (idx < 0) idx = 0;
+  if (idx >= frames.length) idx = frames.length - 1;
+  currentScreenIdx = idx;
+  updateScreenInfo();
+  centerOnElement(frames[currentScreenIdx]);
+  if (shouldBroadcast) {
+    broadcast({ type: 'focus_screen', idx: currentScreenIdx });
+  }
+}
+
+function prevScreen() {
+  const frames = getFrames();
+  if (!frames.length) return;
+  currentScreenIdx = (currentScreenIdx - 1 + frames.length) % frames.length;
+  focusScreen(currentScreenIdx);
+}
+
+function nextScreen() {
+  const frames = getFrames();
+  if (!frames.length) return;
+  currentScreenIdx = (currentScreenIdx + 1) % frames.length;
+  focusScreen(currentScreenIdx);
+}
+
+function togglePresentMode(forcedState) {
+  if (forcedState !== undefined) {
+    isViewMode = !!forcedState;
+  } else {
+    if (isViewMode && !isLoggedInStudio) {
+      const pw = prompt('Enter Studio password to enter Editor mode:');
+      if (pw === getPw()) {
+        isLoggedInStudio = true;
+        isViewMode = false;
+      } else {
+        if (pw !== null) alert('Incorrect password.');
+        return;
+      }
+    } else {
+      isViewMode = !isViewMode;
+    }
+  }
+
+  document.getElementById('app').classList.toggle('view-mode', isViewMode);
+  const pbtn = document.getElementById('present-btn');
+  if (pbtn) pbtn.textContent = isViewMode ? 'Exit Present' : '▶ Present';
+
+  if (isViewMode) {
+    deselAll();
+    updateScreenInfo();
+    const frames = getFrames();
+    if (frames.length > 0) {
+      centerOnElement(frames[currentScreenIdx || 0]);
+    }
+  }
+}
+
+function openShareModal() {
+  const url = new URL(window.location.href);
+  url.hash = myId ? `view&join=${myId}` : 'view';
+  document.getElementById('share-link-input').value = url.toString();
+  document.getElementById('share-modal').style.display = 'flex';
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal').style.display = 'none';
+}
+
+function copyClientShareLink() {
+  const input = document.getElementById('share-link-input');
+  const text = input.value;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast('Client view link copied!'));
+  } else {
+    input.select();
+    document.execCommand('copy');
+    showToast('Client view link copied!');
+  }
+}
+
+function downloadClientHtml() {
+  const frames = getFrames();
+  if (frames.length === 0) {
+    alert('Please add at least one Frame before downloading client presentation HTML.');
+    return;
+  }
+  const projectTitle = S.projectName || 'Ligma Design Presentation';
+  const framesData = frames.map(f => ({
+    id: f.id,
+    label: f.label || 'Screen',
+    w: f.w || 390,
+    h: f.h || 844,
+    bg: f.fill || '#ffffff',
+    html: f.html || ''
+  }));
+
+  const clientHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${esc(projectTitle)} - Presentation</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#111113;color:#eee;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  #header{height:48px;background:#1e1e20;border-bottom:1px solid #2e2e32;display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:100;flex-shrink:0;}
+  .logo{font-size:13px;font-weight:700;letter-spacing:-.3px;color:#fff;display:flex;align-items:center;gap:8px;}
+  .badge{background:#0d99ff;color:#fff;font-size:10px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.5px;}
+  #nav{display:flex;align-items:center;gap:10px;}
+  .btn{background:#2a2a2e;color:#ddd;border:1px solid #3e3e42;border-radius:5px;padding:6px 12px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
+  .btn:hover{background:#3a3a40;color:#fff;}
+  select{background:#2a2a2e;color:#ddd;border:1px solid #3e3e42;border-radius:5px;padding:5px 10px;font-size:12px;outline:none;}
+  #stage{flex:1;position:relative;overflow:auto;display:flex;align-items:center;justify-content:center;padding:30px;background-image:radial-gradient(circle,#282828 1px,transparent 1px);background-size:24px 24px;}
+  #viewport-wrapper{transition:transform .15s ease-out;box-shadow:0 25px 60px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.08);border-radius:12px;overflow:hidden;background:#fff;display:flex;flex-direction:column;position:relative;}
+  iframe{width:100%;height:100%;border:none;display:block;}
+  #thumbs{display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(20,20,22,.9);backdrop-filter:blur(8px);border:1px solid #3a3a40;padding:6px 10px;border-radius:30px;gap:6px;z-index:90;}
+  .t-dot{width:10px;height:10px;border-radius:50%;background:#555;cursor:pointer;transition:.2s;}
+  .t-dot.active{background:#0d99ff;transform:scale(1.25);}
+  #keys-tip{position:fixed;bottom:14px;right:16px;font-size:11px;color:#666;}
+</style>
+</head>
+<body>
+  <div id="header">
+    <div class="logo">
+      <span class="badge">VIEW MODE</span>
+      ${esc(projectTitle)}
+    </div>
+    <div id="nav">
+      <button class="btn" onclick="goPrev()">◀ Prev</button>
+      <select id="screen-sel" onchange="goTo(+this.value)"></select>
+      <button class="btn" onclick="goNext()">Next ▶</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn" onclick="fitScreen()">Fit Screen</button>
+      <button class="btn" onclick="actualSize()">100%</button>
+      <button class="btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+    </div>
+  </div>
+  <div id="stage">
+    <div id="viewport-wrapper">
+      <iframe id="frame-view" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+  </div>
+  <div id="thumbs"></div>
+  <div id="keys-tip">Use ← → arrow keys to navigate</div>
+
+  <script>
+    const FRAMES = ${JSON.stringify(framesData)};
+    let cur = 0;
+    let mode = 'fit';
+
+    const sel = document.getElementById('screen-sel');
+    const wrap = document.getElementById('viewport-wrapper');
+    const ifr = document.getElementById('frame-view');
+    const thumbs = document.getElementById('thumbs');
+
+    FRAMES.forEach((f, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = (i + 1) + '. ' + f.label + ' (' + f.w + 'x' + f.h + ')';
+      sel.appendChild(opt);
+
+      const dot = document.createElement('div');
+      dot.className = 't-dot' + (i === 0 ? ' active' : '');
+      dot.onclick = () => goTo(i);
+      dot.title = f.label;
+      thumbs.appendChild(dot);
+    });
+    if (FRAMES.length > 1) thumbs.style.display = 'flex';
+
+    function renderScreen() {
+      const f = FRAMES[cur];
+      sel.value = cur;
+      document.querySelectorAll('.t-dot').forEach((d, i) => d.classList.toggle('active', i === cur));
+      wrap.style.width = f.w + 'px';
+      wrap.style.height = f.h + 'px';
+      wrap.style.background = f.bg || '#fff';
+      
+      const doc = ifr.contentWindow.document;
+      doc.open();
+      doc.write(f.html || '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#888;font-family:sans-serif">' + f.label + '</div>');
+      doc.close();
+
+      applyScale();
+    }
+
+    function applyScale() {
+      const f = FRAMES[cur];
+      const stage = document.getElementById('stage');
+      if (mode === 'fit') {
+        const padX = 60, padY = 60;
+        const availW = stage.clientWidth - padX;
+        const availH = stage.clientHeight - padY;
+        const scale = Math.min(availW / f.w, availH / f.h, 1);
+        wrap.style.transform = 'scale(' + scale + ')';
+      } else {
+        wrap.style.transform = 'scale(1)';
+      }
+    }
+
+    function goTo(i) {
+      if (i < 0) i = 0;
+      if (i >= FRAMES.length) i = FRAMES.length - 1;
+      cur = i;
+      renderScreen();
+    }
+    function goPrev() { goTo((cur - 1 + FRAMES.length) % FRAMES.length); }
+    function goNext() { goTo((cur + 1) % FRAMES.length); }
+
+    function fitScreen() { mode = 'fit'; applyScale(); }
+    function actualSize() { mode = 'actual'; applyScale(); }
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+
+    window.addEventListener('resize', applyScale);
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); goPrev(); }
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); goNext(); }
+      if (e.key === 'f') toggleFullscreen();
+    });
+
+    renderScreen();
+  <\/script>
+</body>
+</html>`;
+
+  const blob = new Blob([clientHtml], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (S.projectName || 'presentation').toLowerCase().replace(/\s+/g, '-') + '-presentation.html';
+  a.click();
+  showToast('Presentation HTML downloaded!');
+}
 
 // ═══════════════════════════════════════════════════
 //  ELEMENTS
@@ -994,6 +1328,22 @@ function startDraw(e) {
 function onElDown(e) {
   if (e.button!==0) return;
   e.stopPropagation();
+  if (isViewMode) {
+    let t = e.target;
+    while (t && !t.classList.contains('el')) t = t.parentElement;
+    if (t) {
+      const id = parseInt(t.id.split('-')[1]);
+      const el = getEl(id);
+      if (el && el.type === 'frame') {
+        const frames = getFrames();
+        const idx = frames.findIndex(f => f.id === id);
+        if (idx !== -1) {
+          focusScreen(idx);
+        }
+      }
+    }
+    return;
+  }
   if (e.target.classList.contains('rh')) {
     const id = parseInt(e.target.dataset.id);
     const el = getEl(id); if (!el) return;
@@ -1025,6 +1375,7 @@ function onElDown(e) {
 }
 
 function onElDbl(e) {
+  if (isViewMode) return;
   let t = e.target;
   while (t && !t.classList.contains('el')) t = t.parentElement;
   if (!t) return;
@@ -1038,6 +1389,7 @@ function onElDbl(e) {
 }
 
 function onElCtx(e) {
+  if (isViewMode) { e.preventDefault(); return; }
   e.preventDefault();
   let t = e.target;
   while (t && !t.classList.contains('el')) t = t.parentElement;
@@ -1148,6 +1500,11 @@ function onUp(e) {
 // ═══════════════════════════════════════════════════
 document.addEventListener('keydown', e => {
   const inp = e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT';
+  if (isViewMode && !inp) {
+    if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prevScreen(); return; }
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); nextScreen(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); togglePresentMode(false); return; }
+  }
   if (!inp) {
     const tk = { v:'select',f:'frame',r:'rect',e:'ellipse',t:'text',s:'sticky',c:'connect' };
     if (tk[e.key.toLowerCase()]) setTool(tk[e.key.toLowerCase()]);
@@ -1386,7 +1743,7 @@ function initPeer() {
       const rid = hash.get('join');
       if (rid && rid !== id) {
         document.getElementById('join-id').value = rid;
-        connectToPeer();
+        connectToPeer(rid);
       }
     });
     peer.on('connection', conn => setupConn(conn));
@@ -1416,8 +1773,8 @@ function setupConn(conn) {
   });
 }
 
-function connectToPeer() {
-  const rid = document.getElementById('join-id').value.trim();
+function connectToPeer(overrideId) {
+  const rid = (typeof overrideId === 'string' && overrideId) ? overrideId : document.getElementById('join-id').value.trim();
   if (!rid || !peer) { showToast('Enter a code first'); return; }
   if (rid === myId) { showToast("That's your own code"); return; }
   if (conns.find(c => c.peer === rid)) { showToast('Already connected'); return; }
@@ -1431,12 +1788,23 @@ function handleRemote(data, fromId) {
     updateRemoteCursor(fromId, data);
     return;
   }
+  if (data.type === 'focus_screen') {
+    if (typeof data.idx === 'number') {
+      focusScreen(data.idx, false);
+    }
+    return;
+  }
   if (data.type === 'init_state') {
     // Merge remote state — remote has seniority (they were there first)
     S.elements = data.state.elements;
     S.connections = data.state.connections;
     S.nextId = Math.max(S.nextId, data.state.nextId);
     renderAll();
+    if (isViewMode) {
+      updateScreenInfo();
+      const frames = getFrames();
+      if (frames.length > 0) centerOnElement(frames[currentScreenIdx || 0]);
+    }
     // Store their info for cursor
     if (!remoteCursors[fromId]) remoteCursors[fromId] = {};
     remoteCursors[fromId].name = data.name;
@@ -1455,6 +1823,7 @@ function handleRemote(data, fromId) {
       CV.appendChild(buildDiv(data.el));
       renderConns();
       renderLayers();
+      if (isViewMode) updateScreenInfo();
     }
     return;
   }
@@ -1465,6 +1834,7 @@ function handleRemote(data, fromId) {
   }
   if (data.type === 'el_del') {
     delEl(data.id);
+    if (isViewMode) updateScreenInfo();
     return;
   }
   if (data.type === 'peer_info') {
@@ -1594,6 +1964,18 @@ function copyPeerId() {
 // ═══════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', () => {
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  if (hash.has('view') || window.location.hash.includes('view')) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').classList.add('on');
+    loadProject();
+    renderAll();
+    togglePresentMode(true);
+    localName = 'Client';
+    initPeer();
+  }
+});
 console.log('%c Ligma Design ', 'background:#0d99ff;color:white;font-size:13px;font-weight:bold;border-radius:4px;padding:2px 6px');
 </script>
 </body>

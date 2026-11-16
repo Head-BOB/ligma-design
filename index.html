@@ -408,6 +408,9 @@
           <label>W</label><input type="number" id="hw" value="390" min="1">
           <label>H</label><input type="number" id="hh" value="844" min="1">
         </div>
+        <div class="szr" style="margin-bottom:7px">
+          <label>Name</label><input type="text" id="hname" placeholder="e.g. Home Screen" style="flex:1">
+        </div>
         <button class="btn p" style="width:100%;margin-bottom:5px" onclick="addHtmlFrame()">Add Frame</button>
         <button class="btn" style="width:100%" onclick="updateSelHtml()">Update Selected Frame</button>
       </div>
@@ -420,6 +423,8 @@
 
 <!-- Context menu -->
 <div id="ctx">
+  <div class="ci" onclick="ctxDo('rename')">Rename <span style="color:var(--text2);font-size:11px">F2</span></div>
+  <div class="csep"></div>
   <div class="ci" onclick="ctxDo('copy')">Copy <span style="color:var(--text2);font-size:11px">Ctrl C</span></div>
   <div class="ci" onclick="ctxDo('paste')">Paste <span style="color:var(--text2);font-size:11px">Ctrl V</span></div>
   <div class="ci" onclick="ctxDo('dup')">Duplicate <span style="color:var(--text2);font-size:11px">Ctrl D</span></div>
@@ -509,16 +514,31 @@
 
 <!-- Settings Modal -->
 <div id="set-modal" class="mb" style="display:none">
-  <div class="mo">
+  <div class="mo" style="width:440px">
     <h2>Settings</h2>
     <div class="mor"><label>Project name</label><input id="pname" placeholder="My Project"></div>
-    <div class="mor"><label>Change password</label><input type="password" id="npw" placeholder="Leave blank to keep"></div>
+    <div class="mor"><label>Master password</label><input type="password" id="npw" placeholder="Leave blank to keep"></div>
     <div class="mor"><label>Snap guides</label>
       <select id="snap-tog"><option value="1">On</option><option value="0">Off</option></select>
     </div>
     <div class="mor"><label>Backup</label>
       <button class="btn" style="flex:1;justify-content:center;font-size:12px" onclick="restoreBackup()">Restore Canvas from Backup</button>
     </div>
+
+    <!-- Team Members & Passwords -->
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;font-weight:600;color:var(--text)">Team Accounts</span>
+        <span style="font-size:11px;color:var(--text2)">Unique logins for friends &amp; team</span>
+      </div>
+      <div id="team-users-list" style="max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:6px">
+        <input id="new-tu-name" placeholder="Friend's username" style="flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-size:12px;color:var(--text)">
+        <input id="new-tu-pw" type="password" placeholder="Password" style="flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:6px 8px;font-size:12px;color:var(--text)">
+        <button class="btn p" style="font-size:11px;padding:6px 12px" onclick="addTeamUser()">Add User</button>
+      </div>
+    </div>
+
     <div class="ma">
       <button class="btn" onclick="closeSettings()">Cancel</button>
       <button class="btn p" onclick="saveSettings()">Save</button>
@@ -595,20 +615,66 @@ let ui = {
 };
 
 // ═══════════════════════════════════════════════════
-//  LOGIN
+//  LOGIN & TEAM ACCOUNTS
 // ═══════════════════════════════════════════════════
+const USERS_KEY = 'ligmadesign_users';
+const DEFAULT_USERS = [
+  { username: 'hunter', password: 'user123' },
+  { username: 'friend', password: 'friend123' }
+];
+
+function getUsers() {
+  try {
+    const raw = localStorage.getItem(USERS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch(e) {}
+  return [...DEFAULT_USERS];
+}
+
+function saveUsers(arr) {
+  try { localStorage.setItem(USERS_KEY, JSON.stringify(arr)); } catch(e){}
+}
+
 const getPw = () => localStorage.getItem(PWK) || DEFAULT_PW;
 
 document.getElementById('pw-btn').onclick = attemptLogin;
 ['pw-input','ln-input'].forEach(id =>
   document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') attemptLogin(); }));
 
+// Prefill last logged-in username
+try {
+  const lastUser = localStorage.getItem('ligmadesign_last_user');
+  if (lastUser && document.getElementById('ln-input')) {
+    document.getElementById('ln-input').value = lastUser;
+  }
+} catch(e) {}
+
 function attemptLogin() {
-  const name = document.getElementById('ln-input').value.trim() || 'Anonymous';
-  const pw = document.getElementById('pw-input').value;
-  if (pw === getPw()) {
+  const usernameInput = document.getElementById('ln-input').value.trim();
+  const pwInput = document.getElementById('pw-input').value;
+  const users = getUsers();
+  const masterPw = getPw();
+
+  let authenticated = false;
+  let finalName = usernameInput || 'Anonymous';
+
+  const matched = users.find(u => u.username.toLowerCase() === usernameInput.toLowerCase());
+  if (matched && matched.password === pwInput) {
+    authenticated = true;
+    finalName = matched.username;
+  } else if (pwInput === masterPw) {
+    // Master password works for any username
+    authenticated = true;
+    finalName = usernameInput || 'Admin';
+  }
+
+  if (authenticated) {
     isLoggedInStudio = true;
-    localName = name;
+    localName = finalName;
+    try { localStorage.setItem('ligmadesign_last_user', finalName); } catch(e){}
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('on');
     loadProject();
@@ -616,7 +682,7 @@ function attemptLogin() {
     renderAll();
     initPeer();
   } else {
-    document.getElementById('login-error').textContent = 'Incorrect password.';
+    document.getElementById('login-error').textContent = 'Incorrect username or password.';
     document.getElementById('pw-input').value = '';
   }
 }
@@ -1075,6 +1141,11 @@ function buildDiv(el) {
   if (el.type === 'frame') {
     const lbl = document.createElement('div');
     lbl.className = 'fl'; lbl.textContent = el.label;
+    lbl.title = 'Double-click to rename frame';
+    lbl.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      renameEl(el.id);
+    });
     d.appendChild(lbl);
 
     if (el.html) {
@@ -1243,8 +1314,18 @@ function renderLayers() {
   [...S.elements].reverse().forEach(el => {
     const item = document.createElement('div');
     item.className = 'li' + (el.id===ui.selId?' on':'');
-    item.innerHTML = `<em class="li-icon">${LICONS[el.type]||'□'}</em><span class="li-name">${esc(el.label)}</span><span class="li-vis" onclick="toggleHide(${el.id},event)">${el.hidden?'—':'●'}</span>`;
+    item.innerHTML = `<em class="li-icon">${LICONS[el.type]||'□'}</em><span class="li-name" title="Double-click or right-click to rename">${esc(el.label)}</span><span class="li-vis" onclick="toggleHide(${el.id},event)">${el.hidden?'—':'●'}</span>`;
     item.addEventListener('click', () => selEl(el.id));
+    item.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      renameEl(el.id);
+    });
+    item.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      selEl(el.id);
+      showCtx(e.clientX, e.clientY);
+    });
     list.appendChild(item);
   });
 }
@@ -1311,7 +1392,16 @@ function updateProps() {
 
 function sp(id, k, v) {
   const el = getEl(id); if (!el) return;
-  el[k] = v; refreshEl(id); renderLayers(); updateProps(); renderConns();
+  el[k] = v;
+  if (k === 'label') {
+    const dom = document.getElementById('el-' + id);
+    if (dom) {
+      const flbl = dom.querySelector('.fl');
+      if (flbl) flbl.textContent = el.label;
+    }
+    if (isViewMode) updateScreenInfo();
+  }
+  refreshEl(id); renderLayers(); updateProps(); renderConns();
   broadcast({ type:'el_update', el: {...el} });
 }
 
@@ -1327,6 +1417,8 @@ function loadHtmlPanel(id) {
   document.getElementById('html-in').value = el.html || '';
   document.getElementById('hw').value = el.w;
   document.getElementById('hh').value = el.h;
+  const hn = document.getElementById('hname');
+  if (hn) hn.value = el.label || '';
   showToast('HTML loaded — edit and click Update Selected Frame');
 }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -1576,6 +1668,7 @@ document.addEventListener('keydown', e => {
       if (ui.selConn) { S.connections=S.connections.filter(c=>c.id!==ui.selConn); ui.selConn=null; renderConns(); e.preventDefault(); }
     }
     if (e.key==='Escape') { deselAll(); setTool('select'); ui.connStart=null; }
+    if (e.key==='F2' && ui.selId) { e.preventDefault(); renameEl(ui.selId); }
     if (ui.selId && e.key.startsWith('Arrow')) {
       e.preventDefault();
       const el=getEl(ui.selId), d=e.shiftKey?10:1;
@@ -1624,6 +1717,7 @@ function addHtmlFrame() {
   const html = document.getElementById('html-in').value.trim();
   const w = parseInt(document.getElementById('hw').value) || 390;
   const h = parseInt(document.getElementById('hh').value) || 844;
+  const customName = (document.getElementById('hname') ? document.getElementById('hname').value.trim() : '');
 
   let posX, posY;
   const frames = S.elements.filter(e => e.type === 'frame' && !e.hidden);
@@ -1646,7 +1740,7 @@ function addHtmlFrame() {
     posY = p.y - h / 2;
   }
 
-  const el = mkEl('frame', posX, posY, w, h, { html });
+  const el = mkEl('frame', posX, posY, w, h, { html, label: customName || undefined });
   addElToCanvas(el);
   setTool('select');
   broadcast({ type: 'el_add', el: { ...el } });
@@ -1659,17 +1753,20 @@ function addHtmlFrame() {
     renderCamera();
   }
 
-  showToast('Frame added to the right');
+  showToast('Frame added: ' + el.label);
 }
 function updateSelHtml() {
   const el = getEl(ui.selId);
   if (!el||el.type!=='frame') { showToast('Select a frame first'); return; }
+  const customName = (document.getElementById('hname') ? document.getElementById('hname').value.trim() : '');
+  if (customName) el.label = customName;
   el.html = document.getElementById('html-in').value.trim();
   el.w = parseInt(document.getElementById('hw').value)||el.w;
   el.h = parseInt(document.getElementById('hh').value)||el.h;
-  refreshEl(el.id); updateProps();
+  refreshEl(el.id); renderLayers(); updateProps();
+  if (isViewMode) updateScreenInfo();
   broadcast({ type:'el_update', el:{...el} });
-  showToast('Frame updated');
+  showToast('Frame updated: ' + el.label);
 }
 
 // ═══════════════════════════════════════════════════
@@ -1687,19 +1784,46 @@ function dupEl(id) {
 function pasteEl() { if (ui.clipboard) dupEl(ui.clipboard.id); }
 
 // ═══════════════════════════════════════════════════
-//  CONTEXT MENU
+//  CONTEXT MENU & RENAME
 // ═══════════════════════════════════════════════════
+function renameEl(id) {
+  const el = getEl(id);
+  if (!el) return;
+  const current = el.label || '';
+  const newName = prompt('Rename ' + (el.type === 'frame' ? 'Frame' : 'Element') + ':', current);
+  if (newName !== null && newName.trim() && newName.trim() !== current) {
+    el.label = newName.trim();
+    const dom = document.getElementById('el-' + id);
+    if (dom) {
+      const flbl = dom.querySelector('.fl');
+      if (flbl) flbl.textContent = el.label;
+    }
+    renderLayers();
+    updateProps();
+    if (isViewMode) updateScreenInfo();
+    broadcast({ type: 'el_update', el: { ...el } });
+    saveProject();
+    showToast('Renamed to ' + el.label);
+  }
+}
+
 const CTX = document.getElementById('ctx');
 function showCtx(x, y) {
   CTX.style.display='block';
   CTX.style.left=Math.min(x,window.innerWidth-180)+'px';
-  CTX.style.top=Math.min(y,window.innerHeight-230)+'px';
+  CTX.style.top=Math.min(y,window.innerHeight-270)+'px';
 }
 document.addEventListener('click', () => CTX.style.display='none');
-document.addEventListener('contextmenu', e => { if (!e.target.closest('.el')) { e.preventDefault(); CTX.style.display='none'; } });
+document.addEventListener('contextmenu', e => {
+  if (!e.target.closest('.el') && !e.target.closest('#layers .li')) {
+    e.preventDefault();
+    CTX.style.display='none';
+  }
+});
 function ctxDo(a) {
   CTX.style.display='none';
   const id=ui.selId;
+  if (a==='rename') { if(id) renameEl(id); }
   if (a==='del') { if(id){delEl(id);broadcast({type:'el_del',id});} }
   if (a==='dup') { if(id) dupEl(id); }
   if (a==='copy') { const el=getEl(id); if(el) ui.clipboard=el; }
@@ -1756,22 +1880,81 @@ function dl(c,n,m) {
 }
 
 // ═══════════════════════════════════════════════════
-//  SETTINGS
+//  SETTINGS & TEAM USERS
 // ═══════════════════════════════════════════════════
-function openSettings() {
-  document.getElementById('npw').value='';
-  document.getElementById('pname').value=S.projectName;
-  document.getElementById('snap-tog').value=S.snapEnabled?'1':'0';
-  document.getElementById('set-modal').style.display='flex';
+function renderTeamUsers() {
+  const list = document.getElementById('team-users-list');
+  if (!list) return;
+  const users = getUsers();
+  list.innerHTML = '';
+  if (users.length === 0) {
+    list.innerHTML = '<div style="font-size:11px;color:var(--text2);padding:4px 0">No team members added yet.</div>';
+    return;
+  }
+  users.forEach((u, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--panel2);padding:5px 8px;border-radius:5px;font-size:12px;border:1px solid var(--border);';
+    row.innerHTML = `
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-weight:600;color:var(--text)">${esc(u.username)}</span>
+        <span style="font-size:10px;color:var(--text2);background:#333;padding:1px 5px;border-radius:3px">pass: ${esc(u.password)}</span>
+      </div>
+      <button class="btn" style="color:#ff6b6b;border-color:transparent;padding:2px 6px;font-size:11px" onclick="removeTeamUser(${i})">Remove</button>
+    `;
+    list.appendChild(row);
+  });
 }
-function closeSettings() { document.getElementById('set-modal').style.display='none'; }
+
+function addTeamUser() {
+  const nameInput = document.getElementById('new-tu-name');
+  const pwInput = document.getElementById('new-tu-pw');
+  const uName = nameInput.value.trim();
+  const uPw = pwInput.value.trim();
+  if (!uName) { alert('Please enter a username'); return; }
+  if (!uPw) { alert('Please enter a password'); return; }
+
+  const users = getUsers();
+  const existingIdx = users.findIndex(u => u.username.toLowerCase() === uName.toLowerCase());
+  if (existingIdx !== -1) {
+    users[existingIdx].password = uPw;
+    showToast(`Updated password for ${uName}`);
+  } else {
+    users.push({ username: uName, password: uPw });
+    showToast(`Added ${uName} to team`);
+  }
+  saveUsers(users);
+  nameInput.value = '';
+  pwInput.value = '';
+  renderTeamUsers();
+}
+
+function removeTeamUser(idx) {
+  const users = getUsers();
+  if (users[idx]) {
+    const removed = users[idx].username;
+    users.splice(idx, 1);
+    saveUsers(users);
+    renderTeamUsers();
+    showToast(`Removed ${removed}`);
+  }
+}
+
+function openSettings() {
+  document.getElementById('npw').value = '';
+  document.getElementById('pname').value = S.projectName || '';
+  document.getElementById('snap-tog').value = S.snapEnabled ? '1' : '0';
+  renderTeamUsers();
+  document.getElementById('set-modal').style.display = 'flex';
+}
+function closeSettings() { document.getElementById('set-modal').style.display = 'none'; }
 function saveSettings() {
-  const np=document.getElementById('npw').value;
-  const name=document.getElementById('pname').value;
-  if (np) { localStorage.setItem(PWK,np); showToast('Password changed'); }
-  if (name) S.projectName=name;
-  S.snapEnabled=document.getElementById('snap-tog').value==='1';
-  closeSettings(); saveProject();
+  const np = document.getElementById('npw').value;
+  const name = document.getElementById('pname').value;
+  if (np) { localStorage.setItem(PWK, np); showToast('Master password changed'); }
+  if (name) S.projectName = name;
+  S.snapEnabled = document.getElementById('snap-tog').value === '1';
+  closeSettings();
+  saveProject();
 }
 document.querySelectorAll('.mb').forEach(b => b.addEventListener('click', e => { if(e.target===b) b.style.display='none'; }));
 function switchTab(t) {

@@ -641,7 +641,22 @@ const getEl = id => S.elements.find(e => e.id === id);
 function delEl(id) {
   S.elements = S.elements.filter(e => e.id !== id);
   S.connections = S.connections.filter(c => c.from !== id && c.to !== id);
+  const d = document.getElementById('el-' + id);
+  if (d) d.remove();
   if (ui.selId === id) ui.selId = null;
+  renderConns();
+  renderLayers();
+  updateProps();
+}
+
+function addElToCanvas(el) {
+  if (!document.getElementById('el-' + el.id)) {
+    CV.appendChild(buildDiv(el));
+  }
+  selEl(el.id);
+  renderConns();
+  renderLayers();
+  updateProps();
 }
 
 // ═══════════════════════════════════════════════════
@@ -839,7 +854,13 @@ function renderLayers() {
 function toggleHide(id, e) {
   e.stopPropagation();
   const el = getEl(id);
-  if (el) { el.hidden = !el.hidden; renderAll(); }
+  if (el) {
+    el.hidden = !el.hidden;
+    const d = document.getElementById('el-' + id);
+    if (d) d.style.display = el.hidden ? 'none' : 'block';
+    renderConns();
+    renderLayers();
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -914,10 +935,31 @@ function loadHtmlPanel(id) {
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // ═══════════════════════════════════════════════════
-//  SELECTION
+//  SELECTION (Flicker-Free: never destroy iframes!)
 // ═══════════════════════════════════════════════════
-function selEl(id) { ui.selId=id; ui.selConn=null; renderEls(); renderConns(); renderLayers(); updateProps(); }
-function deselAll() { ui.selId=null; ui.selConn=null; renderEls(); renderConns(); renderLayers(); updateProps(); }
+function updateSelectionUI() {
+  CV.querySelectorAll('.el').forEach(d => {
+    const elId = parseInt(d.id.replace('el-',''));
+    d.classList.toggle('sel', elId === ui.selId);
+  });
+  renderConns();
+  renderLayers();
+  updateProps();
+}
+
+function selEl(id) {
+  if (ui.selId === id && ui.selConn === null) return;
+  ui.selId = id;
+  ui.selConn = null;
+  updateSelectionUI();
+}
+
+function deselAll() {
+  if (ui.selId === null && ui.selConn === null) return;
+  ui.selId = null;
+  ui.selConn = null;
+  updateSelectionUI();
+}
 
 // ═══════════════════════════════════════════════════
 //  MOUSE — CANVAS BG
@@ -1095,7 +1137,7 @@ function onUp(e) {
     if (w<5||h<5) { x=ui.dwsx; y=ui.dwsy; [w,h]=defs[ui.tool]||[100,100]; }
     const html = ui.tool==='frame' ? (document.getElementById('html-in').value.trim()) : '';
     const el = mkEl(ui.tool, x, y, w, h, { html });
-    renderAll(); selEl(el.id);
+    addElToCanvas(el);
     if (ui.tool!=='frame') setTool('select');
     broadcast({ type:'el_add', el:{...el} });
   }
@@ -1110,7 +1152,7 @@ document.addEventListener('keydown', e => {
     const tk = { v:'select',f:'frame',r:'rect',e:'ellipse',t:'text',s:'sticky',c:'connect' };
     if (tk[e.key.toLowerCase()]) setTool(tk[e.key.toLowerCase()]);
     if (e.key==='Delete'||e.key==='Backspace') {
-      if (ui.selId) { delEl(ui.selId); renderAll(); e.preventDefault(); }
+      if (ui.selId) { const id=ui.selId; delEl(id); broadcast({type:'el_del',id}); e.preventDefault(); }
       if (ui.selConn) { S.connections=S.connections.filter(c=>c.id!==ui.selConn); ui.selConn=null; renderConns(); e.preventDefault(); }
     }
     if (e.key==='Escape') { deselAll(); setTool('select'); ui.connStart=null; }
@@ -1160,14 +1202,44 @@ function setDev(w, h, btn) {
 }
 function addHtmlFrame() {
   const html = document.getElementById('html-in').value.trim();
-  const w = parseInt(document.getElementById('hw').value)||390;
-  const h = parseInt(document.getElementById('hh').value)||844;
+  const w = parseInt(document.getElementById('hw').value) || 390;
+  const h = parseInt(document.getElementById('hh').value) || 844;
+
+  let posX, posY;
+  const frames = S.elements.filter(e => e.type === 'frame' && !e.hidden);
+
+  if (frames.length > 0) {
+    // If a frame is selected, place to its right; otherwise place to the right of the rightmost frame
+    const selFrame = frames.find(e => e.id === ui.selId);
+    let refFrame = selFrame;
+    if (!refFrame) {
+      refFrame = frames.reduce((best, cur) => (cur.x + cur.w > best.x + best.w) ? cur : best, frames[0]);
+    }
+    const GAP = 50; // 50px gap between frames
+    posX = refFrame.x + refFrame.w + GAP;
+    posY = refFrame.y; // Top-aligned with previous frame
+  } else {
+    // First frame: center in current viewport
+    const r = CW.getBoundingClientRect();
+    const p = s2c(r.left + r.width / 2, r.top + r.height / 2);
+    posX = p.x - w / 2;
+    posY = p.y - h / 2;
+  }
+
+  const el = mkEl('frame', posX, posY, w, h, { html });
+  addElToCanvas(el);
+  setTool('select');
+  broadcast({ type: 'el_add', el: { ...el } });
+
+  // If the new frame extends past the right of current screen, smoothly pan camera
   const r = CW.getBoundingClientRect();
-  const p = s2c(r.left+r.width/2, r.top+r.height/2);
-  const el = mkEl('frame', p.x-w/2, p.y-h/2, w, h, { html });
-  renderAll(); selEl(el.id); setTool('select');
-  broadcast({ type:'el_add', el:{...el} });
-  showToast('Frame added');
+  const screenRight = c2s(posX + w, posY).x;
+  if (screenRight > r.right - 40) {
+    S.camera.x -= (screenRight - (r.right - 60));
+    renderCamera();
+  }
+
+  showToast('Frame added to the right');
 }
 function updateSelHtml() {
   const el = getEl(ui.selId);
@@ -1189,7 +1261,7 @@ function dupEl(id) {
     fill:src.fill, text:src.text, html:src.html, label:src.label+' copy',
     opacity:src.opacity, fontSize:src.fontSize, fontWeight:src.fontWeight, cornerRadius:src.cornerRadius,
   });
-  renderAll(); selEl(el.id);
+  addElToCanvas(el);
   broadcast({ type:'el_add', el:{...el} });
 }
 function pasteEl() { if (ui.clipboard) dupEl(ui.clipboard.id); }
@@ -1208,12 +1280,30 @@ document.addEventListener('contextmenu', e => { if (!e.target.closest('.el')) { 
 function ctxDo(a) {
   CTX.style.display='none';
   const id=ui.selId;
-  if (a==='del') { if(id){delEl(id);renderAll();broadcast({type:'el_del',id});} }
+  if (a==='del') { if(id){delEl(id);broadcast({type:'el_del',id});} }
   if (a==='dup') { if(id) dupEl(id); }
   if (a==='copy') { const el=getEl(id); if(el) ui.clipboard=el; }
   if (a==='paste') pasteEl();
-  if (a==='front') { const el=getEl(id); if(el){el.zIndex=Math.max(...S.elements.map(e=>e.zIndex))+1;renderAll();} }
-  if (a==='back') { const el=getEl(id); if(el){el.zIndex=Math.min(...S.elements.map(e=>e.zIndex))-1;renderAll();} }
+  if (a==='front') {
+    const el=getEl(id);
+    if(el){
+      el.zIndex=Math.max(...S.elements.map(e=>e.zIndex), 0)+1;
+      const d=document.getElementById('el-'+el.id);
+      if(d) d.style.zIndex=el.zIndex+2;
+      renderLayers();
+      broadcast({type:'el_update', el:{...el}});
+    }
+  }
+  if (a==='back') {
+    const el=getEl(id);
+    if(el){
+      el.zIndex=Math.min(...S.elements.map(e=>e.zIndex), 0)-1;
+      const d=document.getElementById('el-'+el.id);
+      if(d) d.style.zIndex=el.zIndex+2;
+      renderLayers();
+      broadcast({type:'el_update', el:{...el}});
+    }
+  }
   if (a==='export') { showExportModal(); document.getElementById('exp-tgt').value='sel'; }
 }
 
@@ -1362,7 +1452,9 @@ function handleRemote(data, fromId) {
   if (data.type === 'el_add') {
     if (!S.elements.find(e => e.id === data.el.id)) {
       S.elements.push(data.el);
-      renderAll();
+      CV.appendChild(buildDiv(data.el));
+      renderConns();
+      renderLayers();
     }
     return;
   }
@@ -1372,9 +1464,7 @@ function handleRemote(data, fromId) {
     return;
   }
   if (data.type === 'el_del') {
-    S.elements = S.elements.filter(e => e.id !== data.id);
-    S.connections = S.connections.filter(c => c.from !== data.id && c.to !== data.id);
-    renderAll();
+    delEl(data.id);
     return;
   }
   if (data.type === 'peer_info') {

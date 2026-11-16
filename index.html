@@ -362,11 +362,15 @@
 
         <div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:7px 0 4px">Device</div>
         <div class="devp">
-          <button class="db on" onclick="setDev(390,844,this)">iPhone</button>
-          <button class="db" onclick="setDev(360,800,this)">Android</button>
+          <button class="db on" onclick="setDev(390,844,this)">iPhone 13/14</button>
+          <button class="db" onclick="setDev(393,852,this)">iPhone 15/16</button>
+          <button class="db" onclick="setDev(430,932,this)">iPhone Max</button>
+          <button class="db" onclick="setDev(375,667,this)">iPhone SE</button>
+          <button class="db" onclick="setDev(412,915,this)">Android</button>
+          <button class="db" onclick="setDev(360,800,this)">Android SM</button>
           <button class="db" onclick="setDev(768,1024,this)">iPad</button>
-          <button class="db" onclick="setDev(1440,900,this)">Desktop</button>
           <button class="db" onclick="setDev(1280,800,this)">Laptop</button>
+          <button class="db" onclick="setDev(1440,900,this)">Desktop</button>
           <button class="db" onclick="setDev(1920,1080,this)">1080p</button>
         </div>
         <div class="szr">
@@ -563,6 +567,16 @@ function renderCamera() {
   const ox = S.camera.x % gs, oy = S.camera.y % gs;
   document.getElementById('cbg').style.cssText =
     `position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle,#2e2e2e 1px,transparent 1px);background-size:${gs}px ${gs}px;background-position:${ox}px ${oy}px;`;
+  // Reposition remote cursors on screen when camera pans/zooms
+  const wr = CW.getBoundingClientRect();
+  for (const pid in remoteCursors) {
+    const rc = remoteCursors[pid];
+    if (rc && rc.el && rc.lastX !== undefined) {
+      const sc = c2s(rc.lastX, rc.lastY);
+      rc.el.style.left = (sc.x - wr.left) + 'px';
+      rc.el.style.top = (sc.y - wr.top) + 'px';
+    }
+  }
 }
 
 function s2c(sx, sy) {
@@ -712,20 +726,29 @@ function refreshEl(id) {
 }
 
 // ── Wrap HTML so it renders at exact pixel viewport with NO layout override ──
-// Only inject viewport meta + charset. Let the HTML's own CSS do the layout.
+// Only inject viewport meta + charset + base typography for fragments.
 function wrapHtml(html, w, h) {
   // Remove any existing viewport meta so only ours applies
   let c = html.replace(/<meta[^>]*name=["']viewport["'][^>]*(\/?>|><\/meta>)/gi, '');
 
   const vm = `<meta name="viewport" content="width=${w}, initial-scale=1, maximum-scale=1, user-scalable=no">`;
   const cs = `<meta charset="UTF-8">`;
+  const baseTypo = `<style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+  </style>`;
 
   if (/<html[\s>]/i.test(c)) {
     if (/<head[\s>]/i.test(c)) return c.replace(/(<head[^>]*>)/i, `$1${cs}${vm}`);
     return c.replace(/(<html[^>]*>)/i, `$1<head>${cs}${vm}</head>`);
   }
   // Fragment
-  return `<!DOCTYPE html><html><head>${cs}${vm}<style>*{box-sizing:border-box;}html,body{margin:0;padding:0;}</style></head><body>${c}</body></html>`;
+  return `<!DOCTYPE html><html><head>${cs}${vm}${baseTypo}</head><body>${c}</body></html>`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -840,6 +863,14 @@ function updateProps() {
         <span class="pl">W</span><input class="pi" type="number" value="${Math.round(el.w)}" onchange="sp(${el.id},'w',+this.value)">
         <span class="pl">H</span><input class="pi" type="number" value="${Math.round(el.h)}" onchange="sp(${el.id},'h',+this.value)">
       </div>
+      ${el.type==='frame'?`
+      <div style="display:flex;gap:3px;margin-bottom:6px;align-items:center">
+        <span class="pl" style="font-size:10px">W±</span>
+        <button class="btn" style="flex:1;padding:2px 3px;font-size:10px" onclick="nudgeSize(${el.id},'w',-10)">-10</button>
+        <button class="btn" style="flex:1;padding:2px 3px;font-size:10px" onclick="nudgeSize(${el.id},'w',-1)">-1</button>
+        <button class="btn" style="flex:1;padding:2px 3px;font-size:10px" onclick="nudgeSize(${el.id},'w',1)">+1</button>
+        <button class="btn" style="flex:1;padding:2px 3px;font-size:10px" onclick="nudgeSize(${el.id},'w',10)">+10</button>
+      </div>`:''}
       ${el.type!=='text'?`<div class="pr"><span class="pl">R</span><input class="pi" type="number" min="0" value="${el.cornerRadius||0}" onchange="sp(${el.id},'cornerRadius',+this.value)"></div>`:''}
     </div>
     ${['rect','ellipse','frame'].includes(el.type)?`<div class="ps"><div class="stitle">Fill</div>
@@ -863,6 +894,13 @@ function updateProps() {
 function sp(id, k, v) {
   const el = getEl(id); if (!el) return;
   el[k] = v; refreshEl(id); renderLayers(); updateProps(); renderConns();
+  broadcast({ type:'el_update', el: {...el} });
+}
+
+function nudgeSize(id, dim, delta) {
+  const el = getEl(id); if (!el) return;
+  el[dim] = Math.max(20, Math.round(el[dim] + delta));
+  refreshEl(id); updateProps(); renderConns();
   broadcast({ type:'el_update', el: {...el} });
 }
 
@@ -995,7 +1033,11 @@ function onMove(e) {
     if (h.includes('n')) { nh=Math.max(10,ui.rzOh-dy); ny=ui.rzOy+(ui.rzOh-nh); }
     el.x=nx; el.y=ny; el.w=nw; el.h=nh;
     const d = document.getElementById('el-'+el.id);
-    if (d) { d.style.left=nx+'px'; d.style.top=ny+'px'; d.style.width=nw+'px'; d.style.height=nh+'px'; }
+    if (d) {
+      d.style.left=nx+'px'; d.style.top=ny+'px'; d.style.width=nw+'px'; d.style.height=nh+'px';
+      const ifr = d.querySelector('iframe');
+      if (ifr) { ifr.style.width = nw + 'px'; ifr.style.height = nh + 'px'; }
+    }
     const sb = document.getElementById('sb-'+el.id);
     if (sb) { sb.textContent=`${Math.round(nw)} × ${Math.round(nh)}`; sb.style.display='block'; }
     updateProps(); return;
@@ -1027,6 +1069,8 @@ function onUp(e) {
   if (ui.isPan) { ui.isPan=false; CW.style.cursor=ui.tool==='select'?'default':'crosshair'; }
   if (ui.isResize) {
     ui.isResize=false;
+    const sb = document.getElementById('sb-'+ui.rzEl?.id);
+    if (sb) sb.style.display='none';
     refreshEl(ui.rzEl.id); renderConns(); updateProps();
     broadcast({ type:'el_update', el:{...ui.rzEl} });
     ui.rzEl=null;
@@ -1308,6 +1352,11 @@ function handleRemote(data, fromId) {
     remoteCursors[fromId].name = data.name;
     remoteCursors[fromId].color = data.color;
     updateMpUI();
+    // Send back our info so the host knows our name and color
+    const c = conns.find(x => x.peer === fromId);
+    if (c && c.open) {
+      c.send({ type: 'peer_info', name: localName, color: localColor });
+    }
     return;
   }
   if (data.type === 'el_add') {
@@ -1328,6 +1377,13 @@ function handleRemote(data, fromId) {
     renderAll();
     return;
   }
+  if (data.type === 'peer_info') {
+    if (!remoteCursors[fromId]) remoteCursors[fromId] = {};
+    remoteCursors[fromId].name = data.name;
+    remoteCursors[fromId].color = data.color;
+    updateMpUI();
+    return;
+  }
   if (data.type === 'conn_add') {
     if (!S.connections.find(c => c.id === data.conn.id)) {
       S.connections.push(data.conn); renderConns();
@@ -1345,6 +1401,7 @@ function updateRemoteCursor(peerId, data) {
   if (!remoteCursors[peerId]) remoteCursors[peerId] = { name: data.name, color: data.color };
   const rc = remoteCursors[peerId];
   rc.name = data.name; rc.color = data.color;
+  rc.lastX = data.x; rc.lastY = data.y;
 
   // Convert canvas coords to screen
   const sc = c2s(data.x, data.y);

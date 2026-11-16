@@ -438,6 +438,9 @@
           <label>Your code</label>
           <div class="session-code" id="my-peer-id" onclick="copyPeerId()" title="Click to copy">Connecting…</div>
         </div>
+        <div style="display:flex;justify-content:flex-end;margin:-4px 0 10px 0">
+          <button class="btn" style="font-size:11px;padding:3px 10px" onclick="copyInviteLink()">Copy Invite Link</button>
+        </div>
         <div class="mor"><label>Join code</label><input id="join-id" placeholder="Paste teammate's code"></div>
         <div class="ma">
           <button class="btn" onclick="closeMpModal()">Close</button>
@@ -445,8 +448,24 @@
         </div>
       </div>
       <div id="mp-connected" style="display:none">
-        <div style="text-align:center;padding:16px 0;color:#22c55e;font-weight:600;font-size:14px">Connected</div>
-        <div id="mp-peers-list" style="font-size:12px;color:var(--text2);margin-bottom:12px"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 8px 0;border-bottom:1px solid var(--border);margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:6px;color:#22c55e;font-weight:600;font-size:13px">
+            <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block"></span>
+            Connected
+          </div>
+          <span id="mp-elements-count" style="font-size:11px;color:var(--text2)"></span>
+        </div>
+        <div id="mp-peers-list" style="font-size:12px;color:var(--text2);margin-bottom:14px"></div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <button class="btn p" style="width:100%;justify-content:center" onclick="syncCanvasToAll()">
+            🔄 Push My Canvas to Team
+          </button>
+          <button class="btn" style="width:100%;justify-content:center" onclick="requestCanvasFromPeers()">
+            📥 Pull Latest Canvas from Team
+          </button>
+        </div>
+
         <div class="ma">
           <button class="btn" onclick="closeMpModal()">Close</button>
           <button class="btn d" style="color:#ff6b6b;border-color:#666" onclick="disconnectAll()">Disconnect</button>
@@ -488,6 +507,9 @@
     <div class="mor"><label>Change password</label><input type="password" id="npw" placeholder="Leave blank to keep"></div>
     <div class="mor"><label>Snap guides</label>
       <select id="snap-tog"><option value="1">On</option><option value="0">Off</option></select>
+    </div>
+    <div class="mor"><label>Backup</label>
+      <button class="btn" style="flex:1;justify-content:center;font-size:12px" onclick="restoreBackup()">Restore Canvas from Backup</button>
     </div>
     <div class="ma">
       <button class="btn" onclick="closeSettings()">Cancel</button>
@@ -596,19 +618,49 @@ function attemptLogin() {
 // ═══════════════════════════════════════════════════
 function saveProject() {
   localStorage.setItem(SK, JSON.stringify({ S }));
+  if (S.elements && S.elements.length > 0) {
+    try { localStorage.setItem('ligmadesign_backup', JSON.stringify({ S })); } catch(e){}
+  }
   showToast('Saved');
 }
 function loadProject() {
   try {
     const r = localStorage.getItem(SK);
-    if (!r) return;
-    const d = JSON.parse(r);
-    if (d.S) {
-      Object.assign(S, d.S);
-      S.camera = S.camera || { x: 200, y: 200, zoom: 1 };
-      S.snapEnabled = S.snapEnabled !== undefined ? S.snapEnabled : true;
+    if (r) {
+      const d = JSON.parse(r);
+      if (d.S && Array.isArray(d.S.elements) && d.S.elements.length > 0) {
+        Object.assign(S, d.S);
+        S.camera = S.camera || { x: 200, y: 200, zoom: 1 };
+        S.snapEnabled = S.snapEnabled !== undefined ? S.snapEnabled : true;
+        return;
+      }
+    }
+    const bk = localStorage.getItem('ligmadesign_backup');
+    if (bk) {
+      const db = JSON.parse(bk);
+      if (db.S && Array.isArray(db.S.elements) && db.S.elements.length > 0) {
+        Object.assign(S, db.S);
+        S.camera = S.camera || { x: 200, y: 200, zoom: 1 };
+        S.snapEnabled = S.snapEnabled !== undefined ? S.snapEnabled : true;
+      }
     }
   } catch(e) {}
+}
+function restoreBackup() {
+  try {
+    const bk = localStorage.getItem('ligmadesign_backup');
+    if (!bk) { alert('No backup found in this browser.'); return; }
+    const db = JSON.parse(bk);
+    if (db.S && Array.isArray(db.S.elements) && db.S.elements.length > 0) {
+      Object.assign(S, db.S);
+      renderAll();
+      saveProject();
+      showToast('Restored ' + S.elements.length + ' elements from backup!');
+      if (conns.length > 0) syncCanvasToAll();
+    } else {
+      alert('Backup is empty.');
+    }
+  } catch(e) { alert('Could not restore backup: ' + e.message); }
 }
 setInterval(saveProject, 60000);
 
@@ -1749,19 +1801,37 @@ function initPeer() {
         connectToPeer(rid);
       }
     });
-    peer.on('connection', conn => setupConn(conn));
+    peer.on('connection', conn => setupConn(conn, false));
     peer.on('error', err => {
       if (err.type !== 'browser-incompatible') console.warn('PeerJS:', err);
     });
   } catch(e) { console.warn('PeerJS unavailable:', e); }
 }
 
-function setupConn(conn) {
+function setupConn(conn, isOutgoing = false) {
+  conn._isOutgoing = isOutgoing;
   conns.push(conn);
   conn.on('open', () => {
     updateMpUI();
-    // Send current full state to new peer
-    conn.send({ type:'init_state', state: JSON.parse(JSON.stringify(S)), name:localName, color:localColor });
+    if (isOutgoing) {
+      // Joiner sends hello to Host
+      conn.send({
+        type: 'joiner_hello',
+        name: localName,
+        color: localColor,
+        elementCount: S.elements.length,
+        state: S.elements.length > 0 ? JSON.parse(JSON.stringify(S)) : null
+      });
+    } else {
+      // Host sends welcome to Joiner
+      conn.send({
+        type: 'host_welcome',
+        name: localName,
+        color: localColor,
+        elementCount: S.elements.length,
+        state: S.elements.length > 0 ? JSON.parse(JSON.stringify(S)) : null
+      });
+    }
   });
   conn.on('data', data => handleRemote(data, conn.peer));
   conn.on('close', () => {
@@ -1782,7 +1852,7 @@ function connectToPeer(overrideId) {
   if (rid === myId) { showToast("That's your own code"); return; }
   if (conns.find(c => c.peer === rid)) { showToast('Already connected'); return; }
   const conn = peer.connect(rid, { reliable:true });
-  setupConn(conn);
+  setupConn(conn, true);
   showToast('Connecting…');
 }
 
@@ -1797,29 +1867,93 @@ function handleRemote(data, fromId) {
     }
     return;
   }
-  if (data.type === 'init_state') {
-    // Merge remote state — remote has seniority (they were there first)
-    S.elements = data.state.elements;
-    S.connections = data.state.connections;
-    S.nextId = Math.max(S.nextId, data.state.nextId);
-    renderAll();
-    if (isViewMode) {
-      updateScreenInfo();
-      const frames = getFrames();
-      if (frames.length > 0) centerOnElement(frames[currentScreenIdx || 0]);
-    }
-    // Store their info for cursor
+
+  // ── Host welcoming Joiner ──
+  if (data.type === 'host_welcome') {
     if (!remoteCursors[fromId]) remoteCursors[fromId] = {};
     remoteCursors[fromId].name = data.name;
     remoteCursors[fromId].color = data.color;
     updateMpUI();
-    // Send back our info so the host knows our name and color
-    const c = conns.find(x => x.peer === fromId);
-    if (c && c.open) {
-      c.send({ type: 'peer_info', name: localName, color: localColor });
+
+    if (data.elementCount > 0 && data.state) {
+      // Host has designs: Joiner adopts Host's project
+      if (S.elements.length === 0 || confirm(`Load ${data.name}'s project (${data.elementCount} items)?`)) {
+        applyRemoteState(data.state, data.name);
+        showToast(`Joined ${data.name}'s project (${data.elementCount} items)`);
+      }
+    } else if (data.elementCount === 0 && S.elements.length > 0) {
+      // Host is blank, but we (Joiner) have designs: push to Host
+      const c = conns.find(x => x.peer === fromId);
+      if (c && c.open) {
+        c.send({
+          type: 'push_state',
+          state: JSON.parse(JSON.stringify(S)),
+          name: localName,
+          color: localColor
+        });
+        showToast(`Shared your canvas with ${data.name}`);
+      }
     }
     return;
   }
+
+  // ── Joiner greeting Host ──
+  if (data.type === 'joiner_hello') {
+    if (!remoteCursors[fromId]) remoteCursors[fromId] = {};
+    remoteCursors[fromId].name = data.name;
+    remoteCursors[fromId].color = data.color;
+    updateMpUI();
+
+    if (S.elements.length === 0 && data.elementCount > 0 && data.state) {
+      // Host is blank, but Joiner brought designs: adopt Joiner's project
+      applyRemoteState(data.state, data.name);
+      showToast(`Loaded ${data.name}'s project (${data.elementCount} items)`);
+    } else if (S.elements.length > 0 && data.elementCount === 0) {
+      // Host has designs, Joiner is blank: Host shares with Joiner
+      const c = conns.find(x => x.peer === fromId);
+      if (c && c.open) {
+        c.send({
+          type: 'push_state',
+          state: JSON.parse(JSON.stringify(S)),
+          name: localName,
+          color: localColor
+        });
+      }
+    }
+    return;
+  }
+
+  // ── Push / Force sync ──
+  if (data.type === 'push_state' || data.type === 'force_sync') {
+    if (data.state && Array.isArray(data.state.elements)) {
+      applyRemoteState(data.state, data.name);
+      showToast(`${data.name || 'Teammate'} synced canvas`);
+    }
+    return;
+  }
+
+  // ── Request state from team ──
+  if (data.type === 'request_state') {
+    const c = conns.find(x => x.peer === fromId);
+    if (c && c.open && S.elements.length > 0) {
+      c.send({
+        type: 'force_sync',
+        state: JSON.parse(JSON.stringify(S)),
+        name: localName,
+        color: localColor
+      });
+    }
+    return;
+  }
+
+  // Legacy fallback
+  if (data.type === 'init_state') {
+    if (data.state && Array.isArray(data.state.elements) && (data.state.elements.length > 0 || S.elements.length === 0)) {
+      applyRemoteState(data.state, data.name);
+    }
+    return;
+  }
+
   if (data.type === 'el_add') {
     if (!S.elements.find(e => e.id === data.el.id)) {
       S.elements.push(data.el);
@@ -1827,6 +1961,7 @@ function handleRemote(data, fromId) {
       renderConns();
       renderLayers();
       if (isViewMode) updateScreenInfo();
+      updateMpUI();
     }
     return;
   }
@@ -1838,6 +1973,7 @@ function handleRemote(data, fromId) {
   if (data.type === 'el_del') {
     delEl(data.id);
     if (isViewMode) updateScreenInfo();
+    updateMpUI();
     return;
   }
   if (data.type === 'peer_info') {
@@ -1853,6 +1989,43 @@ function handleRemote(data, fromId) {
     }
     return;
   }
+}
+
+function applyRemoteState(state, authorName) {
+  if (!state || !Array.isArray(state.elements)) return;
+  // Safety guard: NEVER overwrite a non-empty canvas with 0 elements!
+  if (state.elements.length === 0 && S.elements.length > 0) {
+    console.warn('Ignored empty sync over non-empty canvas.');
+    return;
+  }
+  S.elements = state.elements;
+  S.connections = state.connections || [];
+  S.nextId = Math.max(S.nextId || 1, state.nextId || 1);
+  renderAll();
+  saveProject();
+  if (isViewMode) {
+    updateScreenInfo();
+    const frames = getFrames();
+    if (frames.length > 0) centerOnElement(frames[currentScreenIdx || 0]);
+  }
+  updateMpUI();
+}
+
+function syncCanvasToAll() {
+  if (conns.length === 0) { showToast('No teammates connected'); return; }
+  broadcast({
+    type: 'force_sync',
+    state: JSON.parse(JSON.stringify(S)),
+    name: localName,
+    color: localColor
+  });
+  showToast(`Pushed canvas (${S.elements.length} items) to team`);
+}
+
+function requestCanvasFromPeers() {
+  if (conns.length === 0) { showToast('No teammates connected'); return; }
+  broadcast({ type: 'request_state', name: localName });
+  showToast('Requested latest canvas from team…');
 }
 
 function broadcast(data) {
@@ -1938,6 +2111,8 @@ function updateMpUI() {
     // Show connected state in modal
     document.getElementById('mp-not-connected').style.display = 'none';
     document.getElementById('mp-connected').style.display = 'block';
+    const elCount = document.getElementById('mp-elements-count');
+    if (elCount) elCount.textContent = `${S.elements.length} item${S.elements.length === 1 ? '' : 's'}`;
     const pl = document.getElementById('mp-peers-list');
     pl.innerHTML = Object.values(remoteCursors).map(rc =>
       `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -1960,8 +2135,19 @@ function closeMpModal() { document.getElementById('mp-modal').style.display = 'n
 function copyPeerId() {
   if (!myId) return;
   navigator.clipboard.writeText(myId).then(() => showToast('Code copied'));
-  // Also update URL for easy sharing
   window.location.hash = 'join=' + myId;
+}
+
+function copyInviteLink() {
+  if (!myId) { showToast('Connecting…'); return; }
+  const url = new URL(window.location.href);
+  url.hash = 'join=' + myId;
+  const link = url.toString();
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link).then(() => showToast('Invite link copied!'));
+  } else {
+    prompt('Copy invite link:', link);
+  }
 }
 
 // ═══════════════════════════════════════════════════

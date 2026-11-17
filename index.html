@@ -242,6 +242,28 @@
 </head>
 <body>
 
+<!-- VIEW MODE CONNECT OVERLAY -->
+<div id="view-connect-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,15,15,.95);z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+  <svg viewBox="0 0 34 34" fill="none" style="width:40px;height:40px;">
+    <rect width="34" height="34" rx="8" fill="#0d99ff"/>
+    <rect x="7" y="7" width="8" height="8" rx="2" fill="white"/>
+    <rect x="19" y="7" width="8" height="8" rx="2" fill="rgba(255,255,255,.5)"/>
+    <rect x="7" y="19" width="8" height="8" rx="2" fill="rgba(255,255,255,.5)"/>
+    <circle cx="23" cy="23" r="4" fill="white"/>
+  </svg>
+  <div id="view-overlay-title" style="font-size:17px;font-weight:700;color:#fff;letter-spacing:-.3px;">Connecting to designer's canvas…</div>
+  <div id="view-overlay-sub" style="font-size:13px;color:#888;text-align:center;max-width:300px;line-height:1.6;">This is a live view session. Waiting for the designer to be online.</div>
+  <div style="display:flex;gap:6px;margin-top:4px;">
+    <div class="view-dot-spin" style="width:7px;height:7px;border-radius:50%;background:#0d99ff;animation:vdot .9s infinite alternate"></div>
+    <div class="view-dot-spin" style="width:7px;height:7px;border-radius:50%;background:#0d99ff;animation:vdot .9s .3s infinite alternate"></div>
+    <div class="view-dot-spin" style="width:7px;height:7px;border-radius:50%;background:#0d99ff;animation:vdot .9s .6s infinite alternate"></div>
+  </div>
+  <button id="view-retry-btn" onclick="viewRetryConnect()" style="display:none;background:#0d99ff;color:#fff;border:none;border-radius:7px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;">Retry Connection</button>
+</div>
+<style>
+@keyframes vdot { from{opacity:.2;transform:scale(.8)} to{opacity:1;transform:scale(1.2)} }
+</style>
+
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="l-logo">
@@ -912,7 +934,18 @@ function togglePresentMode(forcedState) {
 
 function openShareModal() {
   const url = new URL(window.location.href);
-  url.hash = myId ? `view&join=${myId}` : 'view';
+  // Always include the host's peer ID so the viewer auto-connects to the live canvas.
+  // If PeerJS hasn't opened yet, warn the user to wait a moment and try again.
+  if (!myId) {
+    showToast('Multiplayer is still connecting — wait a few seconds and try Share again.');
+    // Open the modal anyway with a view-only link so they can at least share the URL
+    url.hash = 'view';
+    document.getElementById('share-link-input').value = url.toString();
+    document.getElementById('share-modal').style.display = 'flex';
+    return;
+  }
+  // Format: #view&join=PEERID  — view triggers client mode, join auto-connects to host
+  url.hash = 'view&join=' + encodeURIComponent(myId);
   document.getElementById('share-link-input').value = url.toString();
   document.getElementById('share-modal').style.display = 'flex';
 }
@@ -2055,11 +2088,15 @@ function initPeer() {
         }
       }, 20000);
 
-      // Auto-join from URL hash if present
-      const hash = new URLSearchParams(window.location.hash.slice(1));
-      let rid = hash.get('join');
+      // Auto-join from URL hash if present — also use the parsed _viewJoinId from view mode init
+      let rid = _viewJoinId; // set by DOMContentLoaded for view mode
+      if (!rid) {
+        // Fall back to parsing hash directly for editor-mode invite links (#join=X)
+        const urlHashParams = new URLSearchParams(window.location.hash.slice(1).replace(/^view(?=&|$)/, 'view=1'));
+        const rawRid = urlHashParams.get('join');
+        if (rawRid) rid = decodeURIComponent(rawRid).trim();
+      }
       if (rid && rid !== id) {
-        rid = decodeURIComponent(rid).trim();
         const jInput = document.getElementById('join-id');
         if (jInput) jInput.value = rid;
         setTimeout(() => connectToPeer(rid), 400);
@@ -2086,10 +2123,19 @@ function initPeer() {
       pendingConn = null;
 
       if (err.type === 'peer-unavailable') {
-        showToast('Could not reach teammate. Check that their tab is open and verify the code.');
+        if (isViewMode) {
+          showViewOverlay(
+            'Designer is offline',
+            'The designer\'s tab may be closed or their session expired. Ask them to re-open the studio and share a fresh link.',
+            true
+          );
+        } else {
+          showToast('Could not reach teammate. Check that their tab is open and verify the code.');
+        }
       } else if (err.type === 'unavailable-id') {
-        // ID collision - generate fresh ID and retry
-        sessionStorage.setItem('ligmadesign_peer_id', 'ligma-' + Math.random().toString(36).substring(2, 9) + '-' + Math.random().toString(36).substring(2, 6));
+        // ID collision - generate fresh ID and retry (use correct key depending on mode)
+        const key = isViewMode ? 'ligmadesign_view_peer_id' : 'ligmadesign_peer_id';
+        sessionStorage.setItem(key, (isViewMode ? 'view-' : 'ligma-') + Math.random().toString(36).substring(2, 9) + '-' + Math.random().toString(36).substring(2, 6));
         try { peer.destroy(); } catch(e){}
         setTimeout(initPeer, 400);
       } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
@@ -2136,18 +2182,18 @@ function setupConn(conn, isOutgoing = false) {
     }
     updateMpUI();
 
-    // Clean join param from URL hash if joined via link
+    // Clean join param from URL hash (but keep 'view' for view mode so refresh still works)
     if (window.location.hash.includes('join=')) {
       try {
         const url = new URL(window.location.href);
-        const hashParams = new URLSearchParams(url.hash.slice(1));
-        hashParams.delete('join');
-        const newHash = hashParams.toString();
-        history.replaceState(null, '', window.location.pathname + window.location.search + (newHash ? '#' + newHash : ''));
+        const rawHashStr = url.hash.slice(1);
+        // In view mode preserve the view flag; just strip &join=X part
+        const cleanedHash = rawHashStr.replace(/&join=[^&]*/g, '').replace(/join=[^&]*&?/g, '');
+        history.replaceState(null, '', window.location.pathname + window.location.search + (cleanedHash ? '#' + cleanedHash : ''));
       } catch(e){}
     }
 
-    showToast('Connected with teammate!');
+    showToast(isViewMode ? 'Connected to designer\'s canvas!' : 'Connected with teammate!');
 
     if (isOutgoing) {
       // Joiner sends hello to Host
@@ -2156,8 +2202,14 @@ function setupConn(conn, isOutgoing = false) {
         name: localName,
         color: localColor,
         elementCount: S.elements.length,
-        state: S.elements.length > 0 ? JSON.parse(JSON.stringify(S)) : null
+        // In view mode always send elementCount:0 so the host pushes its canvas to us
+        state: (!isViewMode && S.elements.length > 0) ? JSON.parse(JSON.stringify(S)) : null
       });
+      // If in view mode, the host_welcome response will trigger hideViewOverlay() via applyRemoteState
+      // But if the host has 0 elements and viewer already has local data, also dismiss overlay
+      if (isViewMode && S.elements.length > 0) {
+        hideViewOverlay();
+      }
     } else {
       // Host sends welcome to Joiner
       conn.send({
@@ -2423,6 +2475,7 @@ function applyRemoteState(state, authorName) {
   renderAll();
   saveProject();
   if (isViewMode) {
+    hideViewOverlay(); // canvas arrived — dismiss the connecting overlay
     updateScreenInfo();
     const frames = getFrames();
     if (frames.length > 0) centerOnElement(frames[currentScreenIdx || 0]);
@@ -2590,16 +2643,98 @@ function copyInviteLink() {
 // ═══════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════
+
+// --- View mode: retry + overlay helpers ---
+let _viewJoinId = null; // the host's peer ID parsed from URL
+let _viewConnectTimer = null;
+let _viewConnected = false;
+
+function showViewOverlay(title, sub, showRetry) {
+  const ov = document.getElementById('view-connect-overlay');
+  if (!ov) return;
+  ov.style.display = 'flex';
+  const t = document.getElementById('view-overlay-title');
+  const s = document.getElementById('view-overlay-sub');
+  const r = document.getElementById('view-retry-btn');
+  if (t) t.textContent = title;
+  if (s) s.textContent = sub;
+  if (r) r.style.display = showRetry ? 'block' : 'none';
+}
+
+function hideViewOverlay() {
+  _viewConnected = true;
+  const ov = document.getElementById('view-connect-overlay');
+  if (ov) ov.style.display = 'none';
+  clearTimeout(_viewConnectTimer);
+}
+
+function viewRetryConnect() {
+  if (!_viewJoinId) return;
+  showViewOverlay('Retrying connection…', 'Trying to reach the designer\'s canvas again.', false);
+  clearTimeout(_viewConnectTimer);
+  _viewConnectTimer = setTimeout(() => {
+    if (!_viewConnected) {
+      showViewOverlay('Still trying…', 'The designer may be offline. Try again when they have the studio open.', true);
+    }
+  }, 10000);
+  if (peer && !peer.destroyed) {
+    connectToPeer(_viewJoinId);
+  } else {
+    initPeer();
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
-  const hash = new URLSearchParams(window.location.hash.slice(1));
-  if (hash.has('view') || window.location.hash.includes('view')) {
+  const rawHash = window.location.hash.slice(1); // e.g. "view&join=ligma-hunter-abc"
+  const isViewModeURL = rawHash.includes('view');
+
+  if (isViewModeURL) {
+    // Parse join code from hash — handle both #view&join=X and #view=&join=X formats
+    const hashParams = new URLSearchParams(rawHash.replace(/^view(?=&|$)/, 'view=1'));
+    _viewJoinId = hashParams.get('join') ? decodeURIComponent(hashParams.get('join')).trim() : null;
+
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('on');
-    loadProject();
+    loadProject();      // loads from local storage if available (own browser)
     renderAll();
     togglePresentMode(true);
-    localName = 'Client';
+    localName = 'Viewer';
+
+    // Show connecting overlay ONLY when there is a host join code
+    // (Without a join code, we just show whatever is in localStorage)
+    if (_viewJoinId) {
+      showViewOverlay(
+        'Connecting to designer\'s canvas…',
+        'Loading the live design from the host. Keep this tab open.',
+        false
+      );
+      // Set a timeout: if not connected in 15s, show retry button
+      _viewConnectTimer = setTimeout(() => {
+        if (!_viewConnected) {
+          showViewOverlay(
+            'Could not reach the designer',
+            'The designer may be offline or their session expired. Ask them to share a fresh link, or click Retry.',
+            true
+          );
+        }
+      }, 15000);
+    }
+
+    // Use a separate peer ID key for view sessions so it doesn't conflict with studio sessions
+    const viewPeerKey = 'ligmadesign_view_peer_id';
+    const existing = sessionStorage.getItem(viewPeerKey);
+    if (!existing) {
+      sessionStorage.setItem(viewPeerKey, 'view-' + Math.random().toString(36).substring(2, 10));
+    }
+    // Temporarily swap the key so initPeer() uses the view-specific ID
+    const studioId = sessionStorage.getItem('ligmadesign_peer_id');
+    sessionStorage.setItem('ligmadesign_peer_id', sessionStorage.getItem(viewPeerKey));
+
     initPeer();
+
+    // Restore studio ID after initPeer() reads it (async safe — just sets the value back)
+    if (studioId) sessionStorage.setItem('ligmadesign_peer_id', studioId);
+    else sessionStorage.removeItem('ligmadesign_peer_id');
   }
 });
 console.log('%c Ligma Design ', 'background:#0d99ff;color:white;font-size:13px;font-weight:bold;border-radius:4px;padding:2px 6px');

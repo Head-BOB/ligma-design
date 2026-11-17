@@ -243,7 +243,7 @@
 <body>
 
 <!-- VIEW MODE CONNECT OVERLAY -->
-<div id="view-connect-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,15,15,.95);z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+<div id="view-connect-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,15,15,.95);z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:14px;">
   <svg viewBox="0 0 34 34" fill="none" style="width:40px;height:40px;">
     <rect width="34" height="34" rx="8" fill="#0d99ff"/>
     <rect x="7" y="7" width="8" height="8" rx="2" fill="white"/>
@@ -252,13 +252,17 @@
     <circle cx="23" cy="23" r="4" fill="white"/>
   </svg>
   <div id="view-overlay-title" style="font-size:17px;font-weight:700;color:#fff;letter-spacing:-.3px;">Connecting to designer's canvas…</div>
-  <div id="view-overlay-sub" style="font-size:13px;color:#888;text-align:center;max-width:300px;line-height:1.6;">This is a live view session. Waiting for the designer to be online.</div>
-  <div style="display:flex;gap:6px;margin-top:4px;">
+  <div id="view-overlay-sub" style="font-size:13px;color:#888;text-align:center;max-width:320px;line-height:1.6;">Waiting for the designer to establish connection.</div>
+  <div id="view-overlay-status" style="font-family:monospace;font-size:11px;color:#0d99ff;background:rgba(13,153,255,0.1);padding:4px 10px;border-radius:4px;border:1px solid rgba(13,153,255,0.25)">Initializing network…</div>
+  <div class="view-dot-container" style="display:flex;gap:6px;margin-top:2px;">
     <div class="view-dot-spin" style="width:7px;height:7px;border-radius:50%;background:#0d99ff;animation:vdot .9s infinite alternate"></div>
     <div class="view-dot-spin" style="width:7px;height:7px;border-radius:50%;background:#0d99ff;animation:vdot .9s .3s infinite alternate"></div>
     <div class="view-dot-spin" style="width:7px;height:7px;border-radius:50%;background:#0d99ff;animation:vdot .9s .6s infinite alternate"></div>
   </div>
-  <button id="view-retry-btn" onclick="viewRetryConnect()" style="display:none;background:#0d99ff;color:#fff;border:none;border-radius:7px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;">Retry Connection</button>
+  <div style="display:flex;gap:8px;margin-top:6px;">
+    <button id="view-retry-btn" onclick="viewRetryConnect()" style="display:none;background:#0d99ff;color:#fff;border:none;border-radius:7px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;">Retry Connection</button>
+    <button id="view-diag-btn" onclick="openDiagModal()" style="background:#2a2a2a;color:#ccc;border:1px solid #444;border-radius:7px;padding:8px 14px;font-size:12px;cursor:pointer;">Diagnostics</button>
+  </div>
 </div>
 <style>
 @keyframes vdot { from{opacity:.2;transform:scale(.8)} to{opacity:1;transform:scale(1.2)} }
@@ -343,6 +347,10 @@
       <button class="btn" onclick="nextScreen()" style="padding:4px 8px" title="Next screen">
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3.5 1.5L7 5 3.5 8.5"/></svg>
       </button>
+      <span id="view-status-badge" onclick="openDiagModal()" title="Click to view connection diagnostics" style="margin-left:8px;font-size:11px;padding:3px 8px;border-radius:10px;background:#2a2a2a;border:1px solid #444;cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+        <span id="view-status-dot" style="width:6px;height:6px;border-radius:50%;background:#888;display:inline-block"></span>
+        <span id="view-status-text">View Mode</span>
+      </span>
     </div>
 
     <!-- Right side -->
@@ -479,6 +487,9 @@
           <button class="btn" style="font-size:11px;padding:3px 10px" onclick="copyInviteLink()">Copy Invite Link</button>
         </div>
         <div class="mor"><label>Join code</label><input id="join-id" placeholder="Paste teammate's code or invite link"></div>
+        <div style="margin:4px 0 10px 0">
+          <button class="btn" style="width:100%;justify-content:center;font-size:11px" onclick="openDiagModal()">Network Diagnostics &amp; Logs</button>
+        </div>
         <div class="ma">
           <button class="btn" onclick="closeMpModal()">Close</button>
           <button class="btn p" id="mp-connect-btn" onclick="connectToPeer()">Connect</button>
@@ -510,6 +521,7 @@
             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-right:6px"><path d="M8 2v9m0 0l-3.5-3.5M8 11l3.5-3.5M2 14h12"/></svg>
             Pull Canvas from Team
           </button>
+          <button class="btn" style="width:100%;justify-content:center;font-size:11px" onclick="openDiagModal()">Network Diagnostics &amp; Logs</button>
         </div>
 
         <div class="ma">
@@ -604,6 +616,51 @@
 
     <div class="ma">
       <button class="btn" onclick="closeShareModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Diagnostics Modal -->
+<div id="diag-modal" class="mb" style="display:none">
+  <div class="mo" style="min-width:440px;max-width:580px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="margin:0">Connection Diagnostics</h2>
+      <button class="btn" onclick="copyDiagReport()" style="font-size:11px;padding:4px 10px">Copy Diagnostics</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:12px">
+      <div style="background:var(--panel2);padding:8px 10px;border-radius:6px">
+        <div style="color:var(--text2);font-size:10px;text-transform:uppercase;margin-bottom:2px">Role / Mode</div>
+        <div id="diag-role" style="font-weight:600">Editor</div>
+      </div>
+      <div style="background:var(--panel2);padding:8px 10px;border-radius:6px">
+        <div style="color:var(--text2);font-size:10px;text-transform:uppercase;margin-bottom:2px">Signaling Server</div>
+        <div id="diag-signaling" style="font-weight:600;display:flex;align-items:center;gap:6px">
+          <span id="diag-signaling-dot" style="width:7px;height:7px;border-radius:50%;background:#888;display:inline-block"></span>
+          <span id="diag-signaling-txt">Disconnected</span>
+        </div>
+      </div>
+      <div style="background:var(--panel2);padding:8px 10px;border-radius:6px">
+        <div style="color:var(--text2);font-size:10px;text-transform:uppercase;margin-bottom:2px">Your Peer ID</div>
+        <div id="diag-my-id" style="font-family:monospace;font-size:11px;word-break:break-all;color:var(--accent)">-</div>
+      </div>
+      <div style="background:var(--panel2);padding:8px 10px;border-radius:6px">
+        <div style="color:var(--text2);font-size:10px;text-transform:uppercase;margin-bottom:2px">Target Peer ID</div>
+        <div id="diag-target-id" style="font-family:monospace;font-size:11px;word-break:break-all">-</div>
+      </div>
+      <div style="background:var(--panel2);padding:8px 10px;border-radius:6px">
+        <div style="color:var(--text2);font-size:10px;text-transform:uppercase;margin-bottom:2px">WebRTC ICE State</div>
+        <div id="diag-ice" style="font-weight:600">-</div>
+      </div>
+      <div style="background:var(--panel2);padding:8px 10px;border-radius:6px">
+        <div style="color:var(--text2);font-size:10px;text-transform:uppercase;margin-bottom:2px">Active Peers</div>
+        <div id="diag-peers-count" style="font-weight:600">0 connected</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:4px;font-weight:600">Event Logs:</div>
+    <div id="diag-log-container" style="background:#111;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:monospace;font-size:11px;color:#aaa;max-height:160px;overflow-y:auto;white-space:pre-wrap;line-height:1.4"></div>
+    <div class="ma" style="margin-top:12px">
+      <button class="btn" onclick="closeDiagModal()">Close</button>
+      <button class="btn p" onclick="retryConnectionFromDiag()">Retry Connection</button>
     </div>
   </div>
 </div>
@@ -932,22 +989,39 @@ function togglePresentMode(forcedState) {
   }
 }
 
-function openShareModal() {
-  const url = new URL(window.location.href);
-  // Always include the host's peer ID so the viewer auto-connects to the live canvas.
-  // If PeerJS hasn't opened yet, warn the user to wait a moment and try again.
-  if (!myId) {
-    showToast('Multiplayer is still connecting — wait a few seconds and try Share again.');
-    // Open the modal anyway with a view-only link so they can at least share the URL
-    url.hash = 'view';
-    document.getElementById('share-link-input').value = url.toString();
-    document.getElementById('share-modal').style.display = 'flex';
-    return;
-  }
-  // Format: #view&join=PEERID  — view triggers client mode, join auto-connects to host
-  url.hash = 'view&join=' + encodeURIComponent(myId);
-  document.getElementById('share-link-input').value = url.toString();
+async function openShareModal() {
   document.getElementById('share-modal').style.display = 'flex';
+  const input = document.getElementById('share-link-input');
+  input.value = 'Generating share link…';
+
+  const url = new URL(window.location.href);
+  let hashParts = ['view'];
+  if (myId) {
+    hashParts.push('join=' + encodeURIComponent(myId));
+  } else {
+    showToast('Multiplayer network still connecting — link includes full offline snapshot');
+  }
+
+  // Embed compressed snapshot so the client loads all screens immediately with 0 delay!
+  if (S.elements && S.elements.length > 0) {
+    try {
+      const snap = {
+        projectName: S.projectName || 'My Project',
+        elements: S.elements,
+        connections: S.connections || [],
+        nextId: S.nextId || 1
+      };
+      const comp = await compressProject(snap);
+      if (comp && comp.length < 24000) {
+        hashParts.push('d=' + comp);
+      }
+    } catch(e) {
+      console.warn('Snapshot compression failed:', e);
+    }
+  }
+
+  url.hash = hashParts.join('&');
+  input.value = url.toString();
 }
 
 function closeShareModal() {
@@ -2022,8 +2096,232 @@ function showToast(msg) {
 }
 
 // ═══════════════════════════════════════════════════
+//  SNAPSHOT COMPRESSION (Fast Native URL Storage)
+// ═══════════════════════════════════════════════════
+async function compressProject(obj) {
+  try {
+    const jsonStr = JSON.stringify(obj);
+    if (typeof CompressionStream !== 'undefined') {
+      const stream = new Blob([jsonStr]).stream();
+      const compStream = stream.pipeThrough(new CompressionStream('deflate'));
+      const compBlob = await new Response(compStream).blob();
+      const buf = await compBlob.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+  } catch(e) {
+    console.warn('CompressionStream failed:', e);
+  }
+  return null;
+}
+
+async function decompressProject(b64url) {
+  try {
+    let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const binary = atob(b64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+    if (typeof DecompressionStream !== 'undefined') {
+      const stream = new Blob([bytes]).stream();
+      const decompStream = stream.pipeThrough(new DecompressionStream('deflate'));
+      const decompBlob = await new Response(decompStream).blob();
+      const text = await decompBlob.text();
+      return JSON.parse(text);
+    }
+  } catch(e) {
+    console.warn('DecompressionStream failed:', e);
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════════
+//  CONNECTION DIAGNOSTICS & LOGGING
+// ═══════════════════════════════════════════════════
+const _diagLogs = [];
+function logDiag(category, message, details) {
+  const ts = new Date().toTimeString().slice(0, 8);
+  const text = details !== undefined ? `${message} ${typeof details === 'object' ? JSON.stringify(details) : details}` : message;
+  _diagLogs.push(`[${ts}] [${category.toUpperCase()}] ${text}`);
+  if (_diagLogs.length > 250) _diagLogs.shift();
+  console.log(`[Ligma:${category}]`, message, details !== undefined ? details : '');
+  updateDiagUI();
+}
+
+function updateDiagUI() {
+  const container = document.getElementById('diag-log-container');
+  if (container) {
+    container.textContent = _diagLogs.slice(-50).join('\n');
+    container.scrollTop = container.scrollHeight;
+  }
+  const rRole = document.getElementById('diag-role');
+  if (rRole) rRole.textContent = isViewMode ? 'Client (View Mode)' : 'Studio Editor';
+
+  const sigDot = document.getElementById('diag-signaling-dot');
+  const sigTxt = document.getElementById('diag-signaling-txt');
+  if (sigDot && sigTxt) {
+    if (peer && !peer.destroyed && !peer.disconnected && myId) {
+      sigDot.style.background = '#22c55e';
+      sigTxt.textContent = 'Connected (0.peerjs.com)';
+    } else if (peer && peer.disconnected) {
+      sigDot.style.background = '#f59e0b';
+      sigTxt.textContent = 'Reconnecting…';
+    } else {
+      sigDot.style.background = '#ef4444';
+      sigTxt.textContent = 'Disconnected';
+    }
+  }
+
+  const myIdEl = document.getElementById('diag-my-id');
+  if (myIdEl) myIdEl.textContent = myId || (peer ? 'Registering…' : 'Offline');
+
+  const tgtEl = document.getElementById('diag-target-id');
+  if (tgtEl) tgtEl.textContent = _viewJoinId || (pendingConn ? pendingConn.peer : (conns[0]?.peer || 'None'));
+
+  const iceEl = document.getElementById('diag-ice');
+  if (iceEl) {
+    const activePc = conns[0]?.peerConnection || pendingConn?.peerConnection;
+    iceEl.textContent = activePc ? (activePc.iceConnectionState || activePc.connectionState || 'init') : 'Idle';
+  }
+
+  const pcnt = document.getElementById('diag-peers-count');
+  if (pcnt) {
+    const openCount = conns.filter(c => c && c.open).length;
+    pcnt.textContent = `${openCount} active connection${openCount === 1 ? '' : 's'}`;
+  }
+
+  // Update view overlay status text if visible
+  const vOvStatus = document.getElementById('view-overlay-status');
+  if (vOvStatus) {
+    if (!myId) {
+      vOvStatus.textContent = 'Connecting to signaling server…';
+    } else if (pendingConn) {
+      const pc = pendingConn.peerConnection;
+      const ice = pc ? pc.iceConnectionState : 'initiating';
+      vOvStatus.textContent = `Connecting to ${pendingConn.peer} (ICE: ${ice})…`;
+    } else if (_viewJoinId) {
+      vOvStatus.textContent = `Target: ${_viewJoinId} (Signaling ready)`;
+    }
+  }
+}
+
+function openDiagModal() {
+  updateDiagUI();
+  document.getElementById('diag-modal').style.display = 'flex';
+}
+function closeDiagModal() {
+  document.getElementById('diag-modal').style.display = 'none';
+}
+
+function copyDiagReport() {
+  const activePc = conns[0]?.peerConnection || pendingConn?.peerConnection;
+  const report = [
+    `=== Ligma Design Diagnostics ===`,
+    `Timestamp: ${new Date().toISOString()}`,
+    `URL: ${window.location.href}`,
+    `Mode: ${isViewMode ? 'View Mode' : 'Editor'}`,
+    `Local Peer ID: ${myId || 'None'}`,
+    `Target Peer ID: ${_viewJoinId || pendingConn?.peer || 'None'}`,
+    `Signaling: ${peer ? (peer.disconnected ? 'Disconnected' : 'Connected') : 'None'}`,
+    `ICE State: ${activePc ? activePc.iceConnectionState : 'None'}`,
+    `Connection State: ${activePc ? activePc.connectionState : 'None'}`,
+    `Open Connections: ${conns.filter(c => c && c.open).length}`,
+    `Canvas Elements: ${S.elements.length}`,
+    `--- Recent Logs ---`,
+    ..._diagLogs.slice(-40)
+  ].join('\n');
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(report).then(() => showToast('Diagnostics copied to clipboard!'));
+  } else {
+    prompt('Diagnostics Report:', report);
+  }
+}
+
+function retryConnectionFromDiag() {
+  closeDiagModal();
+  if (isViewMode) {
+    viewRetryConnect();
+  } else {
+    const rid = document.getElementById('join-id')?.value.trim();
+    if (rid) connectToPeer(rid);
+    else showToast('Enter a code to connect in Multiplayer modal');
+  }
+}
+
+window.ligmaDebug = function() {
+  copyDiagReport();
+  return _diagLogs.join('\n');
+};
+
+function updateViewStatusBadge(text, dotColor) {
+  const badge = document.getElementById('view-status-badge');
+  const dot = document.getElementById('view-status-dot');
+  const txt = document.getElementById('view-status-text');
+  if (badge) badge.style.display = 'inline-flex';
+  if (dot) dot.style.background = dotColor || '#888';
+  if (txt) txt.textContent = text;
+}
+
+function attachPcListeners(conn) {
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    const pc = conn.peerConnection || conn._peerConnection;
+    if (pc) {
+      clearInterval(timer);
+      if (pc._ligmaAttached) return;
+      pc._ligmaAttached = true;
+      logDiag('webrtc', `PeerConnection initialized with ${conn.peer}`);
+      updateDiagUI();
+
+      pc.oniceconnectionstatechange = () => {
+        logDiag('ice', `ICE state -> ${pc.iceConnectionState} (with ${conn.peer})`);
+        updateDiagUI();
+        if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+          logDiag('ice', 'WebRTC direct connection established!');
+        } else if (pc.iceConnectionState === 'failed') {
+          logDiag('ice_err', 'ICE negotiation failed. Attempting ICE restart...');
+          try { pc.restartIce(); } catch(e){}
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        logDiag('webrtc', `WebRTC state -> ${pc.connectionState}`);
+        updateDiagUI();
+      };
+    } else if (attempts > 25) {
+      clearInterval(timer);
+    }
+  }, 100);
+}
+
+// ═══════════════════════════════════════════════════
 //  MULTIPLAYER — PeerJS P2P (Resilient & Persistent)
 // ═══════════════════════════════════════════════════
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
+  { urls: 'stun:stun3.l.google.com:19302' },
+  { urls: 'stun:stun4.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+  { urls: 'stun:global.stun.twilio.com:3478' },
+  {
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:443',
+      'turn:openrelay.metered.ca:443?transport=tcp'
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject'
+  }
+];
+
 let peer = null, conns = [], myId = null;
 let remoteCursors = {}; // peerId -> { x, y, name, color, el, timer }
 let heartbeatInterval = null;
@@ -2038,49 +2336,48 @@ function setMpStatus(text, color) {
 }
 
 function initPeer() {
-  if (peer && !peer.destroyed && !peer.disconnected) return;
+  if (peer && !peer.destroyed && !peer.disconnected) {
+    logDiag('peer', 'initPeer called but already active: ' + myId);
+    return;
+  }
 
   try {
-    // Retain persistent peer ID in this tab/session so refreshes preserve the exact same code
-    let savedPeerId = sessionStorage.getItem('ligmadesign_peer_id');
+    const peerKey = isViewMode ? 'ligmadesign_view_peer_id' : 'ligmadesign_peer_id';
+    let savedPeerId = sessionStorage.getItem(peerKey);
     if (!savedPeerId) {
-      const cleanName = (localName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
-      savedPeerId = 'ligma-' + (cleanName || 'peer') + '-' + Math.random().toString(36).substring(2, 8);
-      sessionStorage.setItem('ligmadesign_peer_id', savedPeerId);
+      const prefix = isViewMode ? 'view' : ((localName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'peer');
+      savedPeerId = 'ligma-' + prefix + '-' + Math.random().toString(36).substring(2, 8);
+      sessionStorage.setItem(peerKey, savedPeerId);
     }
 
+    logDiag('peer', `Initializing PeerJS with ID: ${savedPeerId} (mode: ${isViewMode ? 'view' : 'edit'})`);
     setMpStatus('Connecting to signaling server…', '#eab308');
+    updateDiagUI();
 
-    // High availability STUN server pool for resilient NAT / mobile traversal
+    // High availability STUN + TURN server pool for resilient NAT / mobile traversal
     peer = new Peer(savedPeerId, {
       debug: 0,
       config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' },
-          { urls: 'stun:stun3.l.google.com:19302' },
-          { urls: 'stun:stun4.l.google.com:19302' },
-          { urls: 'stun:stun.cloudflare.com:3478' },
-          { urls: 'stun:global.stun.twilio.com:3478' }
-        ],
-        sdpSemantics: 'unified-plan'
+        iceServers: ICE_SERVERS
       }
     });
 
     peer.on('open', id => {
       myId = id;
+      logDiag('peer_open', `Registered with signaling server as ${id}`);
       const el = document.getElementById('my-peer-id');
       if (el) el.textContent = id;
       const elConn = document.getElementById('my-peer-id-connected');
       if (elConn) elConn.textContent = id;
       setMpStatus('Ready for connections', '#22c55e');
+      updateDiagUI();
 
-      // Keepalive heartbeat ping every 20s to prevent 0.peerjs.com idle disconnect
+      // Keepalive heartbeat ping every 20s
       clearInterval(heartbeatInterval);
       heartbeatInterval = setInterval(() => {
         if (peer && !peer.destroyed) {
           if (peer.disconnected) {
+            logDiag('heartbeat', 'Peer was disconnected, reconnecting...');
             peer.reconnect();
           } else if (peer.socket && peer.socket._ws && peer.socket._ws.readyState === WebSocket.OPEN) {
             try { peer.socket._ws.send(JSON.stringify({ type: 'HEARTBEAT' })); } catch(e){}
@@ -2088,32 +2385,39 @@ function initPeer() {
         }
       }, 20000);
 
-      // Auto-join from URL hash if present — also use the parsed _viewJoinId from view mode init
-      let rid = _viewJoinId; // set by DOMContentLoaded for view mode
+      // Auto-join from URL hash if present
+      let rid = _viewJoinId;
       if (!rid) {
-        // Fall back to parsing hash directly for editor-mode invite links (#join=X)
         const urlHashParams = new URLSearchParams(window.location.hash.slice(1).replace(/^view(?=&|$)/, 'view=1'));
         const rawRid = urlHashParams.get('join');
         if (rawRid) rid = decodeURIComponent(rawRid).trim();
       }
       if (rid && rid !== id) {
+        logDiag('autojoin', `Auto-joining peer: ${rid}`);
         const jInput = document.getElementById('join-id');
         if (jInput) jInput.value = rid;
-        setTimeout(() => connectToPeer(rid), 400);
+        setTimeout(() => connectToPeer(rid), 300);
       }
     });
 
-    peer.on('connection', conn => setupConn(conn, false));
+    peer.on('connection', conn => {
+      logDiag('incoming', `Incoming connection request from ${conn.peer}`);
+      attachPcListeners(conn);
+      setupConn(conn, false);
+    });
 
     peer.on('disconnected', () => {
+      logDiag('disconnected', 'Disconnected from signaling server. Reconnecting...');
       setMpStatus('Reconnecting to server…', '#f59e0b');
+      updateDiagUI();
       if (peer && !peer.destroyed) {
         try { peer.reconnect(); } catch(e){}
       }
     });
 
     peer.on('error', err => {
-      console.warn('PeerJS event:', err.type, err.message);
+      logDiag('error', `PeerJS error [${err.type}]: ${err.message}`);
+      updateDiagUI();
       const btnEl = document.getElementById('mp-connect-btn');
       if (btnEl) {
         btnEl.textContent = 'Connect';
@@ -2124,18 +2428,24 @@ function initPeer() {
 
       if (err.type === 'peer-unavailable') {
         if (isViewMode) {
-          showViewOverlay(
-            'Designer is offline',
-            'The designer\'s tab may be closed or their session expired. Ask them to re-open the studio and share a fresh link.',
-            true
-          );
+          if (S.elements.length > 0) {
+            updateViewStatusBadge('Offline Snapshot (Designer offline)', '#f59e0b');
+            hideViewOverlay();
+            showToast('Designer is offline. You are viewing the saved snapshot.');
+          } else {
+            showViewOverlay(
+              'Designer is offline',
+              'The designer\'s session is currently offline or expired. Ask them to keep their tab open and share a fresh link.',
+              true
+            );
+          }
         } else {
           showToast('Could not reach teammate. Check that their tab is open and verify the code.');
         }
       } else if (err.type === 'unavailable-id') {
-        // ID collision - generate fresh ID and retry (use correct key depending on mode)
-        const key = isViewMode ? 'ligmadesign_view_peer_id' : 'ligmadesign_peer_id';
-        sessionStorage.setItem(key, (isViewMode ? 'view-' : 'ligma-') + Math.random().toString(36).substring(2, 9) + '-' + Math.random().toString(36).substring(2, 6));
+        const peerKey = isViewMode ? 'ligmadesign_view_peer_id' : 'ligmadesign_peer_id';
+        const prefix = isViewMode ? 'view' : 'ligma';
+        sessionStorage.setItem(peerKey, prefix + '-' + Math.random().toString(36).substring(2, 9));
         try { peer.destroy(); } catch(e){}
         setTimeout(initPeer, 400);
       } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
@@ -2144,16 +2454,26 @@ function initPeer() {
       }
     });
   } catch(e) {
-    console.warn('PeerJS unavailable:', e);
+    logDiag('peer_init_err', e.message);
     setMpStatus('Signaling unavailable', '#ef4444');
+    updateDiagUI();
   }
 }
 
-// Auto-reconnect on network recovery
+// Auto-reconnect on network recovery or tab refocus
 window.addEventListener('online', () => {
+  logDiag('network', 'Browser came online');
   if (peer && peer.disconnected) {
     peer.reconnect();
     showToast('Network restored — reconnecting…');
+  }
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    if (peer && peer.disconnected && !peer.destroyed) {
+      logDiag('visibility', 'Tab focused, reconnecting signaling...');
+      peer.reconnect();
+    }
   }
 });
 
@@ -2166,8 +2486,12 @@ window.addEventListener('beforeunload', () => {
 
 function setupConn(conn, isOutgoing = false) {
   conn._isOutgoing = isOutgoing;
+  logDiag('conn_setup', `Setting up connection with ${conn.peer} (outgoing=${isOutgoing})`);
+  attachPcListeners(conn);
+  updateDiagUI();
 
   conn.on('open', () => {
+    logDiag('conn_open', `DataConnection open with ${conn.peer}!`);
     clearTimeout(connectTimeout);
     pendingConn = null;
     const btnEl = document.getElementById('mp-connect-btn');
@@ -2181,37 +2505,30 @@ function setupConn(conn, isOutgoing = false) {
       conns.push(conn);
     }
     updateMpUI();
+    updateDiagUI();
 
-    // Clean join param from URL hash (but keep 'view' for view mode so refresh still works)
-    if (window.location.hash.includes('join=')) {
-      try {
-        const url = new URL(window.location.href);
-        const rawHashStr = url.hash.slice(1);
-        // In view mode preserve the view flag; just strip &join=X part
-        const cleanedHash = rawHashStr.replace(/&join=[^&]*/g, '').replace(/join=[^&]*&?/g, '');
-        history.replaceState(null, '', window.location.pathname + window.location.search + (cleanedHash ? '#' + cleanedHash : ''));
-      } catch(e){}
+    if (isViewMode) {
+      updateViewStatusBadge('Live with Designer', '#22c55e');
+      hideViewOverlay();
     }
 
-    showToast(isViewMode ? 'Connected to designer\'s canvas!' : 'Connected with teammate!');
+    showToast(isViewMode ? 'Connected live with designer!' : 'Connected with teammate!');
 
     if (isOutgoing) {
-      // Joiner sends hello to Host
+      logDiag('handshake', `Sending joiner_hello to ${conn.peer}`);
       conn.send({
         type: 'joiner_hello',
         name: localName,
         color: localColor,
         elementCount: S.elements.length,
-        // In view mode always send elementCount:0 so the host pushes its canvas to us
+        // In view mode send null state so host provides current design
         state: (!isViewMode && S.elements.length > 0) ? JSON.parse(JSON.stringify(S)) : null
       });
-      // If in view mode, the host_welcome response will trigger hideViewOverlay() via applyRemoteState
-      // But if the host has 0 elements and viewer already has local data, also dismiss overlay
       if (isViewMode && S.elements.length > 0) {
         hideViewOverlay();
       }
     } else {
-      // Host sends welcome to Joiner
+      logDiag('handshake', `Sending host_welcome to ${conn.peer} with ${S.elements.length} elements`);
       conn.send({
         type: 'host_welcome',
         name: localName,
@@ -2222,9 +2539,15 @@ function setupConn(conn, isOutgoing = false) {
     }
   });
 
-  conn.on('data', data => handleRemote(data, conn.peer));
+  conn.on('data', data => {
+    if (data.type !== 'cursor') {
+      logDiag('data_recv', `Received [${data.type}] from ${conn.peer}`);
+    }
+    handleRemote(data, conn.peer);
+  });
 
   const cleanup = () => {
+    logDiag('conn_close', `Connection closed with ${conn.peer}`);
     conns = conns.filter(c => c !== conn && c.peer !== conn.peer);
     if (pendingConn === conn) pendingConn = null;
     const btnEl = document.getElementById('mp-connect-btn');
@@ -2232,13 +2555,21 @@ function setupConn(conn, isOutgoing = false) {
       btnEl.textContent = 'Connect';
       btnEl.disabled = false;
     }
+    if (isViewMode) {
+      if (S.elements.length > 0) {
+        updateViewStatusBadge('Offline Snapshot (Disconnected)', '#f59e0b');
+      } else {
+        showViewOverlay('Disconnected from designer', 'Connection was closed. Click Retry to reconnect.', true);
+      }
+    }
     removeRemoteCursor(conn.peer);
     updateMpUI();
+    updateDiagUI();
   };
 
   conn.on('close', cleanup);
   conn.on('error', err => {
-    console.warn('Peer connection error:', err);
+    logDiag('conn_err', `Connection error with ${conn.peer}: ${err.message || err}`);
     cleanup();
   });
 }
@@ -2256,12 +2587,14 @@ function connectToPeer(overrideId) {
 
   if (!rid) { showToast('Enter a code first'); return; }
   if (!peer || peer.destroyed) {
+    logDiag('connect', 'Peer not initialized, calling initPeer and retrying...');
     showToast('Network initializing… retrying in a second');
     initPeer();
     setTimeout(() => connectToPeer(rid), 600);
     return;
   }
   if (peer.disconnected) {
+    logDiag('connect', 'Peer disconnected, reconnecting...');
     showToast('Reconnecting to network…');
     peer.reconnect();
     setTimeout(() => connectToPeer(rid), 800);
@@ -2285,38 +2618,56 @@ function connectToPeer(overrideId) {
     btnEl.disabled = true;
   }
   showToast('Connecting to teammate…');
+  logDiag('connect_attempt', `Calling peer.connect('${rid}')`);
 
   clearTimeout(connectTimeout);
   try {
     const conn = peer.connect(rid, {
-      reliable: true,
-      serialization: 'json'
+      reliable: true
     });
     pendingConn = conn;
+    attachPcListeners(conn);
+    updateDiagUI();
 
-    // Timeout after 12s if connection doesn't open
+    // Timeout after 14s if connection doesn't open
     connectTimeout = setTimeout(() => {
       if (pendingConn === conn && !conn.open) {
+        logDiag('connect_timeout', `Connection to ${rid} timed out after 14s`);
         if (btnEl) {
           btnEl.textContent = 'Connect';
           btnEl.disabled = false;
         }
-        showToast('Connection timed out. Teammate might be offline or code is invalid.');
+        if (isViewMode) {
+          if (S.elements.length > 0) {
+            updateViewStatusBadge('Offline Snapshot (Live timeout)', '#f59e0b');
+            hideViewOverlay();
+          } else {
+            showViewOverlay(
+              'Could not reach the designer',
+              'Connection timed out. The designer may be offline or on a restricted network. Click Retry or check Diagnostics.',
+              true
+            );
+          }
+        } else {
+          showToast('Connection timed out. Teammate might be offline or code is invalid.');
+        }
         try { conn.close(); } catch(e){}
         pendingConn = null;
         conns = conns.filter(c => c !== conn && c.peer !== rid);
         updateMpUI();
+        updateDiagUI();
       }
-    }, 12000);
+    }, 14000);
 
     setupConn(conn, true);
   } catch(e) {
-    console.error('Peer connect error:', e);
+    logDiag('connect_err', `Exception calling peer.connect: ${e.message}`);
     if (btnEl) {
       btnEl.textContent = 'Connect';
       btnEl.disabled = false;
     }
     showToast('Connection failed: ' + (e.message || 'unknown error'));
+    updateDiagUI();
   }
 }
 
@@ -2329,6 +2680,7 @@ function handleRemote(data, fromId) {
     conns = conns.filter(c => c.peer !== fromId);
     removeRemoteCursor(fromId);
     updateMpUI();
+    updateDiagUI();
     showToast(`${data.name || 'Teammate'} disconnected`);
     return;
   }
@@ -2345,14 +2697,15 @@ function handleRemote(data, fromId) {
     remoteCursors[fromId].name = data.name;
     remoteCursors[fromId].color = data.color;
     updateMpUI();
+    updateDiagUI();
 
     if (data.elementCount > 0 && data.state) {
       // Host has designs: Joiner adopts Host's project
-      if (S.elements.length === 0 || confirm(`Load ${data.name}'s project (${data.elementCount} items)?`)) {
+      if (S.elements.length === 0 || isViewMode || confirm(`Load ${data.name}'s project (${data.elementCount} items)?`)) {
         applyRemoteState(data.state, data.name);
-        showToast(`Joined ${data.name}'s project (${data.elementCount} items)`);
+        showToast(`Loaded ${data.name}'s live canvas (${data.elementCount} items)`);
       }
-    } else if (data.elementCount === 0 && S.elements.length > 0) {
+    } else if (data.elementCount === 0 && S.elements.length > 0 && !isViewMode) {
       // Host is blank, but we (Joiner) have designs: push to Host
       const c = conns.find(x => x.peer === fromId && x.open);
       if (c) {
@@ -2374,13 +2727,14 @@ function handleRemote(data, fromId) {
     remoteCursors[fromId].name = data.name;
     remoteCursors[fromId].color = data.color;
     updateMpUI();
+    updateDiagUI();
 
     if (S.elements.length === 0 && data.elementCount > 0 && data.state) {
       // Host is blank, but Joiner brought designs: adopt Joiner's project
       applyRemoteState(data.state, data.name);
       showToast(`Loaded ${data.name}'s project (${data.elementCount} items)`);
-    } else if (S.elements.length > 0 && data.elementCount === 0) {
-      // Host has designs, Joiner is blank: Host shares with Joiner
+    } else if (S.elements.length > 0) {
+      // Host has designs: Host shares current state with Joiner
       const c = conns.find(x => x.peer === fromId && x.open);
       if (c) {
         c.send({
@@ -2475,12 +2829,14 @@ function applyRemoteState(state, authorName) {
   renderAll();
   saveProject();
   if (isViewMode) {
-    hideViewOverlay(); // canvas arrived — dismiss the connecting overlay
+    hideViewOverlay();
+    updateViewStatusBadge(authorName ? `Synced with ${authorName}` : 'Live with Designer', '#22c55e');
     updateScreenInfo();
     const frames = getFrames();
     if (frames.length > 0) centerOnElement(frames[currentScreenIdx || 0]);
   }
   updateMpUI();
+  updateDiagUI();
 }
 
 function syncCanvasToAll() {
@@ -2555,6 +2911,7 @@ function disconnectAll() {
   conns = [];
   Object.keys(remoteCursors).forEach(removeRemoteCursor);
   updateMpUI();
+  updateDiagUI();
   closeMpModal();
   showToast('Disconnected from multiplayer');
 }
@@ -2566,45 +2923,51 @@ function updateMpUI() {
   const openConns = conns.filter(c => c && c.open);
   const connected = openConns.length > 0;
 
-  pill.classList.toggle('connected', connected);
-  lbl.textContent = connected ? `${openConns.length + 1} online` : 'Multiplayer';
-  avs.innerHTML = '';
+  if (pill) pill.classList.toggle('connected', connected);
+  if (lbl) lbl.textContent = connected ? `${openConns.length + 1} online` : 'Multiplayer';
+  if (avs) {
+    avs.innerHTML = '';
+    if (connected) {
+      // My avatar
+      const myAv = document.createElement('div');
+      myAv.className = 'peer-av';
+      myAv.style.background = localColor;
+      myAv.textContent = localName.slice(0,1).toUpperCase();
+      myAv.title = localName + ' (you)';
+      avs.appendChild(myAv);
 
+      // Remote peers
+      Object.entries(remoteCursors).forEach(([id, rc]) => {
+        const av = document.createElement('div');
+        av.className = 'peer-av';
+        av.style.background = rc.color || '#888';
+        av.textContent = (rc.name||'?').slice(0,1).toUpperCase();
+        av.title = rc.name || id;
+        avs.appendChild(av);
+      });
+    }
+  }
+
+  const notConnEl = document.getElementById('mp-not-connected');
+  const connEl = document.getElementById('mp-connected');
   if (connected) {
-    // My avatar
-    const myAv = document.createElement('div');
-    myAv.className = 'peer-av';
-    myAv.style.background = localColor;
-    myAv.textContent = localName.slice(0,1).toUpperCase();
-    myAv.title = localName + ' (you)';
-    avs.appendChild(myAv);
-
-    // Remote peers
-    Object.entries(remoteCursors).forEach(([id, rc]) => {
-      const av = document.createElement('div');
-      av.className = 'peer-av';
-      av.style.background = rc.color || '#888';
-      av.textContent = (rc.name||'?').slice(0,1).toUpperCase();
-      av.title = rc.name || id;
-      avs.appendChild(av);
-    });
-
-    // Show connected state in modal
-    document.getElementById('mp-not-connected').style.display = 'none';
-    document.getElementById('mp-connected').style.display = 'block';
+    if (notConnEl) notConnEl.style.display = 'none';
+    if (connEl) connEl.style.display = 'block';
     const elCount = document.getElementById('mp-elements-count');
     if (elCount) elCount.textContent = `${S.elements.length} item${S.elements.length === 1 ? '' : 's'}`;
     const myPeerConn = document.getElementById('my-peer-id-connected');
     if (myPeerConn && myId) myPeerConn.textContent = myId;
     const pl = document.getElementById('mp-peers-list');
-    pl.innerHTML = Object.values(remoteCursors).map(rc =>
-      `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <div style="width:10px;height:10px;border-radius:50%;background:${rc.color||'#888'}"></div>
-        ${esc(rc.name||'Unknown')}
-      </div>`).join('');
+    if (pl) {
+      pl.innerHTML = Object.values(remoteCursors).map(rc =>
+        `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${rc.color||'#888'}"></div>
+          ${esc(rc.name||'Unknown')}
+        </div>`).join('');
+    }
   } else {
-    document.getElementById('mp-not-connected').style.display = 'block';
-    document.getElementById('mp-connected').style.display = 'none';
+    if (notConnEl) notConnEl.style.display = 'block';
+    if (connEl) connEl.style.display = 'none';
   }
 }
 
@@ -2615,6 +2978,7 @@ function openMpModal() {
   const myPeerConn = document.getElementById('my-peer-id-connected');
   if (myPeerConn && myId) myPeerConn.textContent = myId;
   updateMpUI();
+  updateDiagUI();
   document.getElementById('mp-modal').style.display = 'flex';
 }
 function closeMpModal() { document.getElementById('mp-modal').style.display = 'none'; }
@@ -2644,8 +3008,8 @@ function copyInviteLink() {
 //  INIT
 // ═══════════════════════════════════════════════════
 
-// --- View mode: retry + overlay helpers ---
-let _viewJoinId = null; // the host's peer ID parsed from URL
+// --- View mode helpers ---
+let _viewJoinId = null;
 let _viewConnectTimer = null;
 let _viewConnected = false;
 
@@ -2659,6 +3023,7 @@ function showViewOverlay(title, sub, showRetry) {
   if (t) t.textContent = title;
   if (s) s.textContent = sub;
   if (r) r.style.display = showRetry ? 'block' : 'none';
+  updateDiagUI();
 }
 
 function hideViewOverlay() {
@@ -2670,71 +3035,98 @@ function hideViewOverlay() {
 
 function viewRetryConnect() {
   if (!_viewJoinId) return;
-  showViewOverlay('Retrying connection…', 'Trying to reach the designer\'s canvas again.', false);
+  logDiag('retry', `Manually retrying connection to ${_viewJoinId}`);
+  showViewOverlay('Retrying connection…', 'Re-initiating WebRTC connection with designer.', false);
   clearTimeout(_viewConnectTimer);
   _viewConnectTimer = setTimeout(() => {
     if (!_viewConnected) {
-      showViewOverlay('Still trying…', 'The designer may be offline. Try again when they have the studio open.', true);
+      if (S.elements.length > 0) {
+        hideViewOverlay();
+        updateViewStatusBadge('Offline Snapshot', '#f59e0b');
+      } else {
+        showViewOverlay('Still trying…', 'The designer may be offline. Try again when they have the studio open.', true);
+      }
     }
-  }, 10000);
-  if (peer && !peer.destroyed) {
+  }, 12000);
+
+  if (peer && !peer.destroyed && !peer.disconnected) {
     connectToPeer(_viewJoinId);
   } else {
     initPeer();
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  const rawHash = window.location.hash.slice(1); // e.g. "view&join=ligma-hunter-abc"
+window.addEventListener('DOMContentLoaded', async () => {
+  const rawHash = window.location.hash.slice(1);
   const isViewModeURL = rawHash.includes('view');
 
   if (isViewModeURL) {
-    // Parse join code from hash — handle both #view&join=X and #view=&join=X formats
+    logDiag('init', 'Opening in Client Presentation / View Mode');
     const hashParams = new URLSearchParams(rawHash.replace(/^view(?=&|$)/, 'view=1'));
     _viewJoinId = hashParams.get('join') ? decodeURIComponent(hashParams.get('join')).trim() : null;
+    const snapData = hashParams.get('d');
 
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').classList.add('on');
-    loadProject();      // loads from local storage if available (own browser)
-    renderAll();
     togglePresentMode(true);
     localName = 'Viewer';
 
-    // Show connecting overlay ONLY when there is a host join code
-    // (Without a join code, we just show whatever is in localStorage)
-    if (_viewJoinId) {
+    // If compressed snapshot was embedded in the link, load it instantly!
+    let snapshotLoaded = false;
+    if (snapData) {
+      try {
+        logDiag('snapshot', 'Decompressing snapshot from share link...');
+        const decomp = await decompressProject(snapData);
+        if (decomp && Array.isArray(decomp.elements) && decomp.elements.length > 0) {
+          applyRemoteState(decomp, 'Snapshot');
+          snapshotLoaded = true;
+          logDiag('snapshot', `Successfully loaded ${decomp.elements.length} elements from snapshot!`);
+          updateViewStatusBadge('Snapshot Loaded', '#22c55e');
+          showToast(`Loaded ${decomp.elements.length} screens from link`);
+        }
+      } catch(e) {
+        logDiag('snapshot_err', 'Could not decompress snapshot: ' + e.message);
+      }
+    }
+
+    if (!snapshotLoaded) {
+      loadProject();
+      renderAll();
+    }
+
+    if (snapshotLoaded) {
+      // User can view screens right now without any blocking overlay!
+      if (_viewJoinId) {
+        updateViewStatusBadge('Connecting live…', '#eab308');
+        initPeer();
+      } else {
+        updateViewStatusBadge('Snapshot Presentation', '#22c55e');
+      }
+    } else if (_viewJoinId) {
+      // No snapshot was embedded (old link) — show overlay while connecting live
       showViewOverlay(
         'Connecting to designer\'s canvas…',
-        'Loading the live design from the host. Keep this tab open.',
+        'Loading live designs from designer. Keep this tab open.',
         false
       );
-      // Set a timeout: if not connected in 15s, show retry button
       _viewConnectTimer = setTimeout(() => {
         if (!_viewConnected) {
-          showViewOverlay(
-            'Could not reach the designer',
-            'The designer may be offline or their session expired. Ask them to share a fresh link, or click Retry.',
-            true
-          );
+          if (S.elements.length > 0) {
+            hideViewOverlay();
+            updateViewStatusBadge('Offline Snapshot', '#f59e0b');
+          } else {
+            showViewOverlay(
+              'Could not reach the designer',
+              'The designer may be offline or session expired. Ask them for a fresh link with snapshot embedded, or click Diagnostics.',
+              true
+            );
+          }
         }
       }, 15000);
+      initPeer();
+    } else {
+      updateViewStatusBadge('View Mode', '#888');
     }
-
-    // Use a separate peer ID key for view sessions so it doesn't conflict with studio sessions
-    const viewPeerKey = 'ligmadesign_view_peer_id';
-    const existing = sessionStorage.getItem(viewPeerKey);
-    if (!existing) {
-      sessionStorage.setItem(viewPeerKey, 'view-' + Math.random().toString(36).substring(2, 10));
-    }
-    // Temporarily swap the key so initPeer() uses the view-specific ID
-    const studioId = sessionStorage.getItem('ligmadesign_peer_id');
-    sessionStorage.setItem('ligmadesign_peer_id', sessionStorage.getItem(viewPeerKey));
-
-    initPeer();
-
-    // Restore studio ID after initPeer() reads it (async safe — just sets the value back)
-    if (studioId) sessionStorage.setItem('ligmadesign_peer_id', studioId);
-    else sessionStorage.removeItem('ligmadesign_peer_id');
   }
 });
 console.log('%c Ligma Design ', 'background:#0d99ff;color:white;font-size:13px;font-weight:bold;border-radius:4px;padding:2px 6px');

@@ -449,13 +449,17 @@
           <label>Your code</label>
           <div class="session-code" id="my-peer-id" onclick="copyPeerId()" title="Click to copy">Connecting…</div>
         </div>
-        <div style="display:flex;justify-content:flex-end;margin:-4px 0 10px 0">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:-4px 0 10px 0">
+          <span id="mp-status-indicator" style="font-size:11px;color:var(--text2);display:flex;align-items:center;gap:6px">
+            <span id="mp-status-dot" style="width:7px;height:7px;border-radius:50%;background:#eab308;display:inline-block"></span>
+            <span id="mp-status-text">Connecting to network…</span>
+          </span>
           <button class="btn" style="font-size:11px;padding:3px 10px" onclick="copyInviteLink()">Copy Invite Link</button>
         </div>
-        <div class="mor"><label>Join code</label><input id="join-id" placeholder="Paste teammate's code"></div>
+        <div class="mor"><label>Join code</label><input id="join-id" placeholder="Paste teammate's code or invite link"></div>
         <div class="ma">
           <button class="btn" onclick="closeMpModal()">Close</button>
-          <button class="btn p" onclick="connectToPeer()">Connect</button>
+          <button class="btn p" id="mp-connect-btn" onclick="connectToPeer()">Connect</button>
         </div>
       </div>
       <div id="mp-connected" style="display:none">
@@ -465,6 +469,13 @@
             Connected
           </div>
           <span id="mp-elements-count" style="font-size:11px;color:var(--text2)"></span>
+        </div>
+        <div class="mor" style="margin-bottom:8px">
+          <label style="font-size:11px">Your code</label>
+          <div class="session-code" id="my-peer-id-connected" onclick="copyPeerId()" title="Click to copy" style="font-size:11px;padding:4px 8px;margin:0"></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+          <button class="btn" style="font-size:11px;padding:3px 10px" onclick="copyInviteLink()">Copy Invite Link</button>
         </div>
         <div id="mp-peers-list" style="font-size:12px;color:var(--text2);margin-bottom:14px"></div>
 
@@ -1560,10 +1571,15 @@ function onElCtx(e) {
 document.addEventListener('mousemove', onMove);
 document.addEventListener('mouseup', onUp);
 
-// Also broadcast cursor to peers
+// Also broadcast cursor to peers (throttled ~25fps)
+let lastCursorBroadcast = 0;
 document.addEventListener('mousemove', e => {
+  if (!conns.some(c => c && c.open)) return;
+  const now = Date.now();
+  if (now - lastCursorBroadcast < 40) return;
+  lastCursorBroadcast = now;
   const p = s2c(e.clientX, e.clientY);
-  broadcast({ type:'cursor', x:p.x, y:p.y, name:localName, color:localColor });
+  broadcast({ type:'cursor', x: Math.round(p.x), y: Math.round(p.y), name:localName, color:localColor });
 });
 
 function onMove(e) {
@@ -1973,37 +1989,166 @@ function showToast(msg) {
 }
 
 // ═══════════════════════════════════════════════════
-//  MULTIPLAYER — PeerJS P2P
+//  MULTIPLAYER — PeerJS P2P (Resilient & Persistent)
 // ═══════════════════════════════════════════════════
 let peer = null, conns = [], myId = null;
 let remoteCursors = {}; // peerId -> { x, y, name, color, el, timer }
+let heartbeatInterval = null;
+let pendingConn = null;
+let connectTimeout = null;
+
+function setMpStatus(text, color) {
+  const dot = document.getElementById('mp-status-dot');
+  const txt = document.getElementById('mp-status-text');
+  if (dot) dot.style.background = color;
+  if (txt) txt.textContent = text;
+}
 
 function initPeer() {
+  if (peer && !peer.destroyed && !peer.disconnected) return;
+
   try {
-    peer = new Peer(undefined, { debug: 0 });
-    peer.on('open', id => {
-      myId = id;
-      document.getElementById('my-peer-id').textContent = id;
-      // Auto-join from URL hash
-      const hash = new URLSearchParams(window.location.hash.slice(1));
-      const rid = hash.get('join');
-      if (rid && rid !== id) {
-        document.getElementById('join-id').value = rid;
-        connectToPeer(rid);
+    // Retain persistent peer ID in this tab/session so refreshes preserve the exact same code
+    let savedPeerId = sessionStorage.getItem('ligmadesign_peer_id');
+    if (!savedPeerId) {
+      const cleanName = (localName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8);
+      savedPeerId = 'ligma-' + (cleanName || 'peer') + '-' + Math.random().toString(36).substring(2, 8);
+      sessionStorage.setItem('ligmadesign_peer_id', savedPeerId);
+    }
+
+    setMpStatus('Connecting to signaling server…', '#eab308');
+
+    // High availability STUN server pool for resilient NAT / mobile traversal
+    peer = new Peer(savedPeerId, {
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' },
+          { urls: 'stun:stun3.l.google.com:19302' },
+          { urls: 'stun:stun4.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' },
+          { urls: 'stun:global.stun.twilio.com:3478' }
+        ],
+        sdpSemantics: 'unified-plan'
       }
     });
-    peer.on('connection', conn => setupConn(conn, false));
-    peer.on('error', err => {
-      if (err.type !== 'browser-incompatible') console.warn('PeerJS:', err);
+
+    peer.on('open', id => {
+      myId = id;
+      const el = document.getElementById('my-peer-id');
+      if (el) el.textContent = id;
+      const elConn = document.getElementById('my-peer-id-connected');
+      if (elConn) elConn.textContent = id;
+      setMpStatus('Ready for connections', '#22c55e');
+
+      // Keepalive heartbeat ping every 20s to prevent 0.peerjs.com idle disconnect
+      clearInterval(heartbeatInterval);
+      heartbeatInterval = setInterval(() => {
+        if (peer && !peer.destroyed) {
+          if (peer.disconnected) {
+            peer.reconnect();
+          } else if (peer.socket && peer.socket._ws && peer.socket._ws.readyState === WebSocket.OPEN) {
+            try { peer.socket._ws.send(JSON.stringify({ type: 'HEARTBEAT' })); } catch(e){}
+          }
+        }
+      }, 20000);
+
+      // Auto-join from URL hash if present
+      const hash = new URLSearchParams(window.location.hash.slice(1));
+      let rid = hash.get('join');
+      if (rid && rid !== id) {
+        rid = decodeURIComponent(rid).trim();
+        const jInput = document.getElementById('join-id');
+        if (jInput) jInput.value = rid;
+        setTimeout(() => connectToPeer(rid), 400);
+      }
     });
-  } catch(e) { console.warn('PeerJS unavailable:', e); }
+
+    peer.on('connection', conn => setupConn(conn, false));
+
+    peer.on('disconnected', () => {
+      setMpStatus('Reconnecting to server…', '#f59e0b');
+      if (peer && !peer.destroyed) {
+        try { peer.reconnect(); } catch(e){}
+      }
+    });
+
+    peer.on('error', err => {
+      console.warn('PeerJS event:', err.type, err.message);
+      const btnEl = document.getElementById('mp-connect-btn');
+      if (btnEl) {
+        btnEl.textContent = 'Connect';
+        btnEl.disabled = false;
+      }
+      clearTimeout(connectTimeout);
+      pendingConn = null;
+
+      if (err.type === 'peer-unavailable') {
+        showToast('Could not reach teammate. Check that their tab is open and verify the code.');
+      } else if (err.type === 'unavailable-id') {
+        // ID collision - generate fresh ID and retry
+        sessionStorage.setItem('ligmadesign_peer_id', 'ligma-' + Math.random().toString(36).substring(2, 9) + '-' + Math.random().toString(36).substring(2, 6));
+        try { peer.destroy(); } catch(e){}
+        setTimeout(initPeer, 400);
+      } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error') {
+        setMpStatus('Network issue, retrying…', '#ef4444');
+        setTimeout(() => { if (peer && !peer.destroyed) peer.reconnect(); }, 2000);
+      }
+    });
+  } catch(e) {
+    console.warn('PeerJS unavailable:', e);
+    setMpStatus('Signaling unavailable', '#ef4444');
+  }
 }
+
+// Auto-reconnect on network recovery
+window.addEventListener('online', () => {
+  if (peer && peer.disconnected) {
+    peer.reconnect();
+    showToast('Network restored — reconnecting…');
+  }
+});
+
+// Clean leave notification on tab unload
+window.addEventListener('beforeunload', () => {
+  broadcast({ type: 'peer_leave', name: localName });
+  conns.forEach(c => { try { c.close(); } catch(e){} });
+  if (peer) { try { peer.destroy(); } catch(e){} }
+});
 
 function setupConn(conn, isOutgoing = false) {
   conn._isOutgoing = isOutgoing;
-  conns.push(conn);
+
   conn.on('open', () => {
+    clearTimeout(connectTimeout);
+    pendingConn = null;
+    const btnEl = document.getElementById('mp-connect-btn');
+    if (btnEl) {
+      btnEl.textContent = 'Connect';
+      btnEl.disabled = false;
+    }
+
+    // Only add to conns once verified open!
+    if (!conns.some(c => c.peer === conn.peer)) {
+      conns.push(conn);
+    }
     updateMpUI();
+
+    // Clean join param from URL hash if joined via link
+    if (window.location.hash.includes('join=')) {
+      try {
+        const url = new URL(window.location.href);
+        const hashParams = new URLSearchParams(url.hash.slice(1));
+        hashParams.delete('join');
+        const newHash = hashParams.toString();
+        history.replaceState(null, '', window.location.pathname + window.location.search + (newHash ? '#' + newHash : ''));
+      } catch(e){}
+    }
+
+    showToast('Connected with teammate!');
+
     if (isOutgoing) {
       // Joiner sends hello to Host
       conn.send({
@@ -2024,32 +2169,115 @@ function setupConn(conn, isOutgoing = false) {
       });
     }
   });
+
   conn.on('data', data => handleRemote(data, conn.peer));
-  conn.on('close', () => {
-    conns = conns.filter(c => c !== conn);
+
+  const cleanup = () => {
+    conns = conns.filter(c => c !== conn && c.peer !== conn.peer);
+    if (pendingConn === conn) pendingConn = null;
+    const btnEl = document.getElementById('mp-connect-btn');
+    if (btnEl) {
+      btnEl.textContent = 'Connect';
+      btnEl.disabled = false;
+    }
     removeRemoteCursor(conn.peer);
     updateMpUI();
-  });
-  conn.on('error', () => {
-    conns = conns.filter(c => c !== conn);
-    removeRemoteCursor(conn.peer);
-    updateMpUI();
+  };
+
+  conn.on('close', cleanup);
+  conn.on('error', err => {
+    console.warn('Peer connection error:', err);
+    cleanup();
   });
 }
 
 function connectToPeer(overrideId) {
-  const rid = (typeof overrideId === 'string' && overrideId) ? overrideId : document.getElementById('join-id').value.trim();
-  if (!rid || !peer) { showToast('Enter a code first'); return; }
-  if (rid === myId) { showToast("That's your own code"); return; }
-  if (conns.find(c => c.peer === rid)) { showToast('Already connected'); return; }
-  const conn = peer.connect(rid, { reliable:true });
-  setupConn(conn, true);
-  showToast('Connecting…');
+  let rid = (typeof overrideId === 'string' && overrideId) ? overrideId.trim() : (document.getElementById('join-id')?.value.trim() || '');
+
+  // If user pasted a full URL with #join=..., extract the code cleanly
+  if (rid.includes('join=')) {
+    try {
+      const match = rid.match(/join=([^&#\s]+)/);
+      if (match && match[1]) rid = decodeURIComponent(match[1]).trim();
+    } catch(e){}
+  }
+
+  if (!rid) { showToast('Enter a code first'); return; }
+  if (!peer || peer.destroyed) {
+    showToast('Network initializing… retrying in a second');
+    initPeer();
+    setTimeout(() => connectToPeer(rid), 600);
+    return;
+  }
+  if (peer.disconnected) {
+    showToast('Reconnecting to network…');
+    peer.reconnect();
+    setTimeout(() => connectToPeer(rid), 800);
+    return;
+  }
+  if (rid === myId) {
+    showToast("That's your own code. Send it to your teammate!");
+    return;
+  }
+  if (conns.some(c => c.peer === rid && c.open)) {
+    showToast('Already connected to this teammate');
+    return;
+  }
+
+  // Filter out any previous unopened attempt to this peer
+  conns = conns.filter(c => c.peer !== rid || c.open);
+
+  const btnEl = document.getElementById('mp-connect-btn');
+  if (btnEl) {
+    btnEl.textContent = 'Connecting…';
+    btnEl.disabled = true;
+  }
+  showToast('Connecting to teammate…');
+
+  clearTimeout(connectTimeout);
+  try {
+    const conn = peer.connect(rid, {
+      reliable: true,
+      serialization: 'json'
+    });
+    pendingConn = conn;
+
+    // Timeout after 12s if connection doesn't open
+    connectTimeout = setTimeout(() => {
+      if (pendingConn === conn && !conn.open) {
+        if (btnEl) {
+          btnEl.textContent = 'Connect';
+          btnEl.disabled = false;
+        }
+        showToast('Connection timed out. Teammate might be offline or code is invalid.');
+        try { conn.close(); } catch(e){}
+        pendingConn = null;
+        conns = conns.filter(c => c !== conn && c.peer !== rid);
+        updateMpUI();
+      }
+    }, 12000);
+
+    setupConn(conn, true);
+  } catch(e) {
+    console.error('Peer connect error:', e);
+    if (btnEl) {
+      btnEl.textContent = 'Connect';
+      btnEl.disabled = false;
+    }
+    showToast('Connection failed: ' + (e.message || 'unknown error'));
+  }
 }
 
 function handleRemote(data, fromId) {
   if (data.type === 'cursor') {
     updateRemoteCursor(fromId, data);
+    return;
+  }
+  if (data.type === 'peer_leave') {
+    conns = conns.filter(c => c.peer !== fromId);
+    removeRemoteCursor(fromId);
+    updateMpUI();
+    showToast(`${data.name || 'Teammate'} disconnected`);
     return;
   }
   if (data.type === 'focus_screen') {
@@ -2074,8 +2302,8 @@ function handleRemote(data, fromId) {
       }
     } else if (data.elementCount === 0 && S.elements.length > 0) {
       // Host is blank, but we (Joiner) have designs: push to Host
-      const c = conns.find(x => x.peer === fromId);
-      if (c && c.open) {
+      const c = conns.find(x => x.peer === fromId && x.open);
+      if (c) {
         c.send({
           type: 'push_state',
           state: JSON.parse(JSON.stringify(S)),
@@ -2101,8 +2329,8 @@ function handleRemote(data, fromId) {
       showToast(`Loaded ${data.name}'s project (${data.elementCount} items)`);
     } else if (S.elements.length > 0 && data.elementCount === 0) {
       // Host has designs, Joiner is blank: Host shares with Joiner
-      const c = conns.find(x => x.peer === fromId);
-      if (c && c.open) {
+      const c = conns.find(x => x.peer === fromId && x.open);
+      if (c) {
         c.send({
           type: 'push_state',
           state: JSON.parse(JSON.stringify(S)),
@@ -2125,8 +2353,8 @@ function handleRemote(data, fromId) {
 
   // ── Request state from team ──
   if (data.type === 'request_state') {
-    const c = conns.find(x => x.peer === fromId);
-    if (c && c.open && S.elements.length > 0) {
+    const c = conns.find(x => x.peer === fromId && x.open);
+    if (c && S.elements.length > 0) {
       c.send({
         type: 'force_sync',
         state: JSON.parse(JSON.stringify(S)),
@@ -2203,7 +2431,8 @@ function applyRemoteState(state, authorName) {
 }
 
 function syncCanvasToAll() {
-  if (conns.length === 0) { showToast('No teammates connected'); return; }
+  const openConns = conns.filter(c => c && c.open);
+  if (openConns.length === 0) { showToast('No teammates connected'); return; }
   broadcast({
     type: 'force_sync',
     state: JSON.parse(JSON.stringify(S)),
@@ -2214,13 +2443,18 @@ function syncCanvasToAll() {
 }
 
 function requestCanvasFromPeers() {
-  if (conns.length === 0) { showToast('No teammates connected'); return; }
+  const openConns = conns.filter(c => c && c.open);
+  if (openConns.length === 0) { showToast('No teammates connected'); return; }
   broadcast({ type: 'request_state', name: localName });
   showToast('Requested latest canvas from team…');
 }
 
 function broadcast(data) {
-  conns.forEach(c => { try { if(c.open) c.send(data); } catch(e){} });
+  conns.forEach(c => {
+    try {
+      if (c && c.open) c.send(data);
+    } catch(e){}
+  });
 }
 
 // ── Remote cursor rendering ──
@@ -2263,21 +2497,24 @@ function removeRemoteCursor(peerId) {
 }
 
 function disconnectAll() {
-  conns.forEach(c => c.close());
+  broadcast({ type: 'peer_leave', name: localName });
+  conns.forEach(c => { try { c.close(); } catch(e){} });
   conns = [];
   Object.keys(remoteCursors).forEach(removeRemoteCursor);
   updateMpUI();
   closeMpModal();
+  showToast('Disconnected from multiplayer');
 }
 
 function updateMpUI() {
   const pill = document.getElementById('mp-pill');
   const lbl = document.getElementById('mp-label');
   const avs = document.getElementById('peer-avatars');
-  const connected = conns.length > 0;
+  const openConns = conns.filter(c => c && c.open);
+  const connected = openConns.length > 0;
 
   pill.classList.toggle('connected', connected);
-  lbl.textContent = connected ? `${conns.length + 1} online` : 'Multiplayer';
+  lbl.textContent = connected ? `${openConns.length + 1} online` : 'Multiplayer';
   avs.innerHTML = '';
 
   if (connected) {
@@ -2304,6 +2541,8 @@ function updateMpUI() {
     document.getElementById('mp-connected').style.display = 'block';
     const elCount = document.getElementById('mp-elements-count');
     if (elCount) elCount.textContent = `${S.elements.length} item${S.elements.length === 1 ? '' : 's'}`;
+    const myPeerConn = document.getElementById('my-peer-id-connected');
+    if (myPeerConn && myId) myPeerConn.textContent = myId;
     const pl = document.getElementById('mp-peers-list');
     pl.innerHTML = Object.values(remoteCursors).map(rc =>
       `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -2318,21 +2557,28 @@ function updateMpUI() {
 
 function openMpModal() {
   document.getElementById('mp-name-lbl').textContent = localName;
+  const el = document.getElementById('my-peer-id');
+  if (el) el.textContent = myId || 'Connecting…';
+  const myPeerConn = document.getElementById('my-peer-id-connected');
+  if (myPeerConn && myId) myPeerConn.textContent = myId;
   updateMpUI();
   document.getElementById('mp-modal').style.display = 'flex';
 }
 function closeMpModal() { document.getElementById('mp-modal').style.display = 'none'; }
 
 function copyPeerId() {
-  if (!myId) return;
-  navigator.clipboard.writeText(myId).then(() => showToast('Code copied'));
-  window.location.hash = 'join=' + myId;
+  if (!myId) { showToast('Connecting to network…'); return; }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(myId).then(() => showToast('Session code copied!'));
+  } else {
+    prompt('Your session code:', myId);
+  }
 }
 
 function copyInviteLink() {
-  if (!myId) { showToast('Connecting…'); return; }
+  if (!myId) { showToast('Connecting to network…'); return; }
   const url = new URL(window.location.href);
-  url.hash = 'join=' + myId;
+  url.hash = 'join=' + encodeURIComponent(myId);
   const link = url.toString();
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(link).then(() => showToast('Invite link copied!'));

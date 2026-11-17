@@ -5,8 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ligma Design</title>
-  <!-- PeerJS for P2P multiplayer (free, no server needed) -->
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- Serverless P2P (Trystero) is loaded on demand by the app script; no server or account needed. -->
   <style>
     :root {
       --bg: #1e1e1e;
@@ -1816,7 +1815,7 @@
     function openShareModal() {
       const url = new URL(window.location.href);
       // Always include the host's peer ID so the viewer auto-connects to the live canvas.
-      // If PeerJS hasn't opened yet, warn the user to wait a moment and try again.
+      // myId is set when the studio starts hosting its room; wait for that before sharing.
       if (!myId) {
         showToast('Multiplayer is still connecting — wait a few seconds and try Share again.');
         // Open the modal anyway with a view-only link so they can at least share the URL
@@ -1826,8 +1825,8 @@
         return;
       }
       // Format: #view&join=PEERID  — view triggers client mode, join auto-connects to host
-      // srv = which signaling server this studio is registered on, so the viewer uses the same one.
-      url.hash = 'view&join=' + encodeURIComponent(myId) + '&srv=' + (sigIdx % SIGNALING_SERVERS.length);
+      url.hash = 'view&join=' + encodeURIComponent(myId);
+      if (!relaysReady()) showToast('Relay networks are still starting — the link works once the status shows Ready.');
       document.getElementById('share-link-input').value = url.toString();
       document.getElementById('share-modal').style.display = 'flex';
     }
@@ -2904,9 +2903,9 @@
     }
 
     // ═══════════════════════════════════════════════════
-    //  MULTIPLAYER — PeerJS P2P (Resilient & Persistent)
+    //  MULTIPLAYER — serverless P2P (see the Trystero section below)
     // ═══════════════════════════════════════════════════
-    let peer = null, conns = [], myId = null;
+    let conns = [], myId = null;
     let remoteCursors = {}; // peerId -> { x, y, name, color, el, timer }
     let heartbeatInterval = null;
     let pendingConn = null;
@@ -2919,212 +2918,229 @@
       if (txt) txt.textContent = text;
     }
 
-    // ── Signaling / ICE configuration ─────────────────────────────────────────
-    // Two browsers can only find each other through a small "signaling" server (it never sees
-    // your designs, it only introduces peers). The free public one (0.peerjs.com) is often slow
-    // or unresponsive, so put YOUR OWN server first — see peer-server/README.md.
-    // The studio tries them in order and fails over automatically.
-    const SIGNALING_SERVERS = [
-      // { host: 'YOUR-APP.onrender.com', port: 443, path: '/', secure: true },
-      { host: '0.peerjs.com', port: 443, path: '/', secure: true },
+    // ═══════════════════════════════════════════════════════════════════════════
+    //  Serverless peer-to-peer (Trystero)
+    //  There is NO server of ours and no account. Two browsers find each other through public
+    //  relay networks (Nostr relays, MQTT brokers, BitTorrent trackers). We join the same "room"
+    //  on all three at once, so if one network is blocked or down the others still work.
+    //  After that introduction, all design data flows directly from browser to browser.
+    // ═══════════════════════════════════════════════════════════════════════════
+    const TRYSTERO_APP_ID = 'ligma-design-p2p-v1';
+    const RELAY_STRATEGIES = [
+      { name: 'nostr', url: 'https://esm.run/trystero@0.25' },
+      { name: 'mqtt', url: 'https://esm.run/@trystero-p2p/mqtt@0.25' },
+      { name: 'torrent', url: 'https://esm.run/@trystero-p2p/torrent@0.25' },
     ];
-    // STUN discovers your public address. Strict NATs / mobile networks also need a TURN relay
-    // (keep the total under 5 servers or discovery slows down).
-    const ICE_SERVERS = [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun.cloudflare.com:3478' },
-      // { urls: 'turn:YOUR-TURN-HOST:443?transport=tcp', username: 'USER', credential: 'PASS' },
-    ];
-    const SIGNAL_OPEN_TIMEOUT = 15000; // give up on one signaling attempt after 15s and retry / fail over
+    // Strict NATs (many mobile networks) need a TURN relay for the direct link. Add yours, e.g.:
+    // { urls: ['turn:YOUR-HOST:443?transport=tcp'], username: 'USER', credential: 'PASS' }
+    const TURN_SERVERS = [];
+    const CONNECT_PATIENCE = 30000;
 
-    let peerOpened = false, peerOpenTimer = null;
-    let sigIdx = 0, sigRetry = 0, idRetry = 0;
-    let lastPeerError = '', pendingJoinRid = null;
-    let _viewerSession = false, _viewSrv = 0;
+    let _viewerSession = false;
+    let lastPeerError = '';
+    const localUid = 'u' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    const relayStatus = {};   // strategy name -> 'loading' | 'ready' | 'failed: reason'
+    const strategyMods = {};  // strategy name -> Promise<module|null>
+    const rooms = {};         // roomId -> { roomId, role: 'host'|'joiner', entries: { strategy: {name, room, act} } }
+    const logical = {};       // "role:uid" -> logical connection to one remote browser
+    const pathOwner = {};     // "roomId|strategy:peerId" -> logical connection
 
-    function currentSignaling() {
-      if (_viewerSession) return SIGNALING_SERVERS[_viewSrv] || SIGNALING_SERVERS[0];
-      return SIGNALING_SERVERS[sigIdx % SIGNALING_SERVERS.length];
-    }
-
-    function peerIdKey() { return _viewerSession ? 'ligmadesign_view_peer_id' : 'ligmadesign_peer_id'; }
-    function peerIdStore() { return _viewerSession ? sessionStorage : localStorage; }
+    const loadModule = url => import(url);
 
     function newPeerId() {
       const rnd = Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 5);
-      if (_viewerSession) return 'view-' + rnd;
       const clean = (localName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8) || 'peer';
       return 'ligma-' + clean + '-' + rnd;
     }
 
-    // The studio's ID is kept in localStorage so a link you already shared keeps working after
-    // you close and reopen the tab. Viewers use a per-tab ID.
+    // The studio's code (= its room) is kept in localStorage so a link you already shared keeps
+    // working after you close and reopen the tab.
     function getPeerId() {
       let id = null;
-      try { id = peerIdStore().getItem(peerIdKey()); } catch (e) { }
-      if (!id) { id = newPeerId(); storePeerId(id); }
+      try { id = localStorage.getItem('ligmadesign_peer_id'); } catch (e) { }
+      if (!id) { id = newPeerId(); try { localStorage.setItem('ligmadesign_peer_id', id); } catch (e) { } }
       return id;
     }
-    function storePeerId(id) { try { peerIdStore().setItem(peerIdKey(), id); } catch (e) { } }
 
-    // One signaling attempt failed before the peer ever opened: tear it down, back off, try again
-    // (on the next server in the list when there is one).
-    function peerFail(reason) {
-      if (peerOpened) return;
-      lastPeerError = reason;
-      clearTimeout(peerOpenTimer);
-      try { if (peer) peer.destroy(); } catch (e) { }
-      peer = null;
-      sigRetry++;
-      if (!_viewerSession && SIGNALING_SERVERS.length > 1) sigIdx++;
-      const srv = currentSignaling();
-      const wait = Math.min(1000 * sigRetry, 8000);
-      setMpStatus('Signaling ' + srv.host + ' failed (' + reason + '), retrying…', '#ef4444');
-      if (_viewerSession && !_viewConnected) {
-        showViewOverlay('Reaching the signaling server…',
-          srv.host + ' did not answer (' + reason + '). Retrying, attempt ' + sigRetry + '. Keep this tab open.', false);
+    function relaySummary() {
+      return RELAY_STRATEGIES.map(s => s.name + ': ' + (relayStatus[s.name] || 'waiting')).join(' · ');
+    }
+    function relaysReady() { return RELAY_STRATEGIES.some(s => relayStatus[s.name] === 'ready'); }
+    function relaysAllFailed() { return RELAY_STRATEGIES.every(s => /^failed/.test(relayStatus[s.name] || '')); }
+
+    function reportRelays() {
+      if (relaysAllFailed()) {
+        setMpStatus('No relay network could start (' + relaySummary() + ')', '#ef4444');
+        if (_viewerSession && !_viewConnected) viewShowFailure();
+      } else if (relaysReady()) {
+        const names = RELAY_STRATEGIES.filter(s => relayStatus[s.name] === 'ready').map(s => s.name).join(', ');
+        setMpStatus('Ready for connections (relays: ' + names + ')', '#22c55e');
+      } else {
+        setMpStatus('Connecting to relay networks…', '#eab308');
       }
-      setTimeout(initPeer, wait);
     }
 
-    function initPeer() {
-      if (peer && !peer.destroyed && !peer.disconnected) return;
-      if (peer) { try { peer.destroy(); } catch (e) { } peer = null; }
+    function loadStrategy(s) {
+      if (!strategyMods[s.name]) {
+        relayStatus[s.name] = 'loading';
+        strategyMods[s.name] = loadModule(s.url).then(m => {
+          if (!m || typeof m.joinRoom !== 'function') throw new Error('no joinRoom export');
+          return m;
+        }).catch(e => {
+          relayStatus[s.name] = 'failed: ' + ((e && e.message) || e);
+          lastPeerError = relayStatus[s.name];
+          reportRelays();
+          return null;
+        });
+      }
+      return strategyMods[s.name];
+    }
 
+    const ownerKey = (roomId, entry, pid) => roomId + '|' + entry.name + ':' + pid;
+
+    function sendOnPath(entry, pid, data) {
       try {
-        const srv = currentSignaling();
-        peerOpened = false;
-        clearTimeout(peerOpenTimer);
-        setMpStatus('Connecting to ' + srv.host + '…', '#eab308');
-
-        const thisPeer = new Peer(getPeerId(), {
-          host: srv.host, port: srv.port, path: srv.path, secure: srv.secure,
-          debug: 0,
-          config: { iceServers: ICE_SERVERS, sdpSemantics: 'unified-plan' }
-        });
-        peer = thisPeer;
-
-        // The public server sometimes accepts the socket but never sends OPEN — don't wait forever.
-        peerOpenTimer = setTimeout(() => {
-          if (peer === thisPeer && !peerOpened) peerFail('timeout');
-        }, SIGNAL_OPEN_TIMEOUT);
-
-        thisPeer.on('open', id => {
-          if (peer !== thisPeer) return;
-          peerOpened = true; sigRetry = 0; idRetry = 0;
-          clearTimeout(peerOpenTimer);
-          myId = id;
-          const el = document.getElementById('my-peer-id');
-          if (el) el.textContent = id;
-          const elConn = document.getElementById('my-peer-id-connected');
-          if (elConn) elConn.textContent = id;
-          setMpStatus('Ready for connections (' + srv.host + ')', '#22c55e');
-
-          // Keepalive: reconnect to the signaling server if it silently dropped us.
-          clearInterval(heartbeatInterval);
-          heartbeatInterval = setInterval(() => {
-            if (peer && !peer.destroyed) {
-              if (peer.disconnected) {
-                try { peer.reconnect(); } catch (e) { }
-              } else if (peer.socket && peer.socket._ws && peer.socket._ws.readyState === WebSocket.OPEN) {
-                try { peer.socket._ws.send(JSON.stringify({ type: 'HEARTBEAT' })); } catch (e) { }
-              }
-            }
-          }, 20000);
-
-          // Auto-join: viewers use the parsed join code; the studio also accepts #join=X invite links
-          // and a code that was typed while the network was still starting.
-          let rid = _viewJoinId || pendingJoinRid;
-          if (!rid) {
-            const urlHashParams = new URLSearchParams(window.location.hash.slice(1).replace(/^view(?=&|$)/, 'view=1'));
-            const rawRid = urlHashParams.get('join');
-            if (rawRid) rid = decodeURIComponent(rawRid).trim();
-          }
-          pendingJoinRid = null;
-          if (rid && rid !== id) {
-            const jInput = document.getElementById('join-id');
-            if (jInput) jInput.value = rid;
-            if (_viewerSession && !_viewConnected) {
-              showViewOverlay('Reaching the designer…', 'Signaling server OK. Opening a direct link to the designer.', false);
-            }
-            setTimeout(() => connectToPeer(rid), 400);
-          }
-        });
-
-        thisPeer.on('connection', conn => setupConn(conn, false));
-
-        thisPeer.on('disconnected', () => {
-          if (peer !== thisPeer || !peerOpened) return; // failures before OPEN go through peerFail
-          setMpStatus('Reconnecting to server…', '#f59e0b');
-          setTimeout(() => {
-            try { if (peer === thisPeer && !thisPeer.destroyed && thisPeer.disconnected) thisPeer.reconnect(); } catch (e) { }
-          }, 1000);
-        });
-
-        thisPeer.on('error', err => {
-          console.warn('PeerJS event:', err.type, err.message);
-          if (peer !== thisPeer) return; // stale event from a peer we already replaced
-          lastPeerError = err.type;
-          const btnEl = document.getElementById('mp-connect-btn');
-          if (btnEl) { btnEl.textContent = 'Connect'; btnEl.disabled = false; }
-          clearTimeout(connectTimeout);
-          pendingConn = null;
-
-          if (err.type === 'peer-unavailable') {
-            if (isViewMode) {
-              showViewOverlay(
-                'Designer is offline',
-                'The designer\'s tab may be closed or their session expired. Ask them to keep the studio open and share the link again. Retrying automatically…',
-                true
-              );
-              scheduleViewRetry();
-            } else {
-              showToast('Could not reach teammate. Check that their tab is open and verify the code.');
-            }
-          } else if (err.type === 'unavailable-id') {
-            // The server still holds this ID (e.g. the tab was closed a moment ago). Wait for it to
-            // expire; only after a few tries give up and take a brand new ID.
-            idRetry++;
-            try { thisPeer.destroy(); } catch (e) { }
-            peer = null;
-            if (idRetry > 4) { storePeerId(newPeerId()); idRetry = 0; }
-            setTimeout(initPeer, 3000);
-          } else if (!peerOpened) {
-            // Any other failure before we were registered with the server (network, socket-error,
-            // server-error, socket-closed ...). Do NOT call reconnect(): PeerJS throws if we never opened.
-            peerFail(err.type);
-          } else if (err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
-            setMpStatus('Network issue, retrying…', '#ef4444');
-            setTimeout(() => {
-              try { if (peer === thisPeer && !thisPeer.destroyed && thisPeer.disconnected) thisPeer.reconnect(); } catch (e) { }
-            }, 2000);
-          }
-        });
-      } catch (e) {
-        console.warn('PeerJS unavailable:', e);
-        lastPeerError = 'PeerJS library did not load';
-        setMpStatus('Signaling unavailable (' + (e.message || 'library not loaded') + ')', '#ef4444');
-        if (_viewerSession && !_viewConnected) {
-          showViewOverlay('Could not start', 'The connection library failed to load (' + (e.message || 'unknown') + '). Check that unpkg.com is reachable and reload.', true);
-        }
-      }
+        const r = entry.act.send(data, { target: pid });
+        if (r && typeof r.catch === 'function') r.catch(() => { });
+        return true;
+      } catch (e) { return false; }
     }
 
-    // Auto-reconnect on network recovery
-    window.addEventListener('online', () => {
-      if (peer && !peer.destroyed && peer.disconnected && peerOpened) {
-        try { peer.reconnect(); } catch (e) { }
-        showToast('Network restored — reconnecting…');
-      } else if (!peer) {
-        initPeer();
+    // One logical connection per remote browser, however many relay networks it was found on.
+    // It looks like a PeerJS DataConnection to the rest of the app (peer, open, send, on, close).
+    function makeLogicalConn(uid, isOut, roomId, key) {
+      const h = {};
+      const lc = { peer: uid, open: false, _isOut: isOut, _roomId: roomId, _key: key, _paths: [] };
+      lc.on = (ev, fn) => { (h[ev] = h[ev] || []).push(fn); return lc; };
+      lc._emit = (ev, a) => {
+        (h[ev] || []).slice().forEach(fn => { try { fn(a); } catch (e) { console.warn('conn handler error', e); } });
+      };
+      lc.send = data => {
+        for (const p of lc._paths) { if (sendOnPath(p.entry, p.pid, data)) return; }
+        throw new Error('no open path to peer');
+      };
+      lc.close = () => closeLogical(lc);
+      return lc;
+    }
+
+    function closeLogical(lc) {
+      if (logical[lc._key] === lc) delete logical[lc._key];
+      Object.keys(pathOwner).forEach(k => { if (pathOwner[k] === lc) delete pathOwner[k]; });
+      lc._paths = [];
+      if (lc.open) { lc.open = false; lc._emit('close'); }
+    }
+
+    function addPath(rec, entry, pid, uid) {
+      const key = rec.role + ':' + uid;
+      let lc = logical[key];
+      if (!lc) {
+        lc = logical[key] = makeLogicalConn(uid, rec.role === 'joiner', rec.roomId, key);
+        setupConn(lc, lc._isOut);
+        lc._paths.push({ entry, pid });
+        pathOwner[ownerKey(rec.roomId, entry, pid)] = lc;
+        lc.open = true;
+        lc._emit('open');
+        return;
       }
-    });
+      if (!lc._paths.some(p => p.entry === entry && p.pid === pid)) lc._paths.push({ entry, pid });
+      pathOwner[ownerKey(rec.roomId, entry, pid)] = lc;
+    }
+
+    function onPathLeave(rec, entry, pid) {
+      const k = ownerKey(rec.roomId, entry, pid);
+      const lc = pathOwner[k];
+      delete pathOwner[k];
+      if (!lc) return;
+      lc._paths = lc._paths.filter(p => !(p.entry === entry && p.pid === pid));
+      if (lc._paths.length === 0) closeLogical(lc);
+    }
+
+    function onPathMessage(rec, entry, pid, data) {
+      if (!data || typeof data !== 'object') return;
+      if (data.type === 'hi') {
+        // A host only accepts joiners and a joiner only accepts the host, so two viewers that
+        // happen to share a room never talk to each other.
+        if (rec.role === 'host' && data.role !== 'joiner') return;
+        if (rec.role === 'joiner' && data.role !== 'host') return;
+        if (typeof data.uid !== 'string' || data.uid === localUid) return;
+        addPath(rec, entry, pid, data.uid);
+        return;
+      }
+      const lc = pathOwner[ownerKey(rec.roomId, entry, pid)];
+      if (lc) lc._emit('data', data);
+    }
+
+    function joinRoomEverywhere(roomId, role) {
+      if (rooms[roomId]) return rooms[roomId];
+      const rec = rooms[roomId] = { roomId, role, entries: {} };
+      RELAY_STRATEGIES.forEach(s => {
+        loadStrategy(s).then(mod => {
+          if (!mod || rooms[roomId] !== rec) return;
+          try {
+            const cfg = { appId: TRYSTERO_APP_ID };
+            if (TURN_SERVERS.length) cfg.turnConfig = TURN_SERVERS;
+            const room = mod.joinRoom(cfg, roomId);
+            const act = room.makeAction('m');
+            const entry = { name: s.name, room, act };
+            rec.entries[s.name] = entry;
+            act.onMessage = (data, meta) => onPathMessage(rec, entry, meta && meta.peerId, data);
+            room.onPeerLeave = pid => onPathLeave(rec, entry, pid);
+            // Assigning onPeerJoin replays peers already present, so no one is missed.
+            room.onPeerJoin = pid => { sendOnPath(entry, pid, { type: 'hi', uid: localUid, role }); };
+            relayStatus[s.name] = 'ready';
+            reportRelays();
+          } catch (e) {
+            relayStatus[s.name] = 'failed: ' + ((e && e.message) || e);
+            lastPeerError = relayStatus[s.name];
+            reportRelays();
+          }
+        });
+      });
+      return rec;
+    }
+
+    function leaveRoom(roomId) {
+      const rec = rooms[roomId];
+      if (!rec) return;
+      delete rooms[roomId];
+      Object.values(logical).filter(lc => lc._roomId === roomId).forEach(closeLogical);
+      Object.values(rec.entries).forEach(e => { try { e.room.leave(); } catch (err) { } });
+    }
+
+    // Studio: start hosting our own room (its name is our shareable code).
+    // Viewer: don't host anything, just look for the designer's room.
+    function initPeer() {
+      if (_viewerSession) {
+        setMpStatus('Connecting to relay networks…', '#eab308');
+        if (_viewJoinId) connectToPeer(_viewJoinId);
+        return;
+      }
+      if (myId) return; // already hosting
+      myId = getPeerId();
+      const el = document.getElementById('my-peer-id');
+      if (el) el.textContent = myId;
+      const elConn = document.getElementById('my-peer-id-connected');
+      if (elConn) elConn.textContent = myId;
+      setMpStatus('Connecting to relay networks…', '#eab308');
+      joinRoomEverywhere(myId, 'host');
+
+      // Studio invite links (#join=CODE) join a teammate's room automatically.
+      const urlHashParams = new URLSearchParams(window.location.hash.slice(1).replace(/^view(?=&|$)/, 'view=1'));
+      const rawRid = urlHashParams.get('join');
+      const rid = rawRid ? decodeURIComponent(rawRid).trim() : '';
+      if (rid && rid !== myId) {
+        const jInput = document.getElementById('join-id');
+        if (jInput) jInput.value = rid;
+        connectToPeer(rid);
+      }
+    }
 
     // Clean leave notification on tab unload
     window.addEventListener('beforeunload', () => {
       broadcast({ type: 'peer_leave', name: localName });
-      conns.forEach(c => { try { c.close(); } catch (e) { } });
-      if (peer) { try { peer.destroy(); } catch (e) { } }
+      Object.keys(rooms).forEach(id => {
+        Object.values(rooms[id].entries).forEach(e => { try { e.room.leave(); } catch (err) { } });
+      });
     });
 
     function setupConn(conn, isOutgoing = false) {
@@ -3222,75 +3238,35 @@
       }
 
       if (!rid) { showToast('Enter a code first'); return; }
-      if (!peer || peer.destroyed || !peer.open) {
-        // Not registered with the signaling server yet. Remember the code; the 'open' handler
-        // connects as soon as the server answers (and retries signaling if it doesn't).
-        pendingJoinRid = rid;
-        showToast('Waiting for the network… will connect automatically');
-        if (!peer || peer.destroyed) initPeer();
-        return;
-      }
-      if (peer.disconnected) {
-        showToast('Reconnecting to network…');
-        pendingJoinRid = rid;
-        try { peer.reconnect(); } catch (e) { }
-        return;
-      }
       if (rid === myId) {
         showToast("That's your own code. Send it to your teammate!");
         return;
       }
-      if (conns.some(c => c.peer === rid && c.open)) {
+      if (conns.some(c => c._roomId === rid && c.open)) {
         showToast('Already connected to this teammate');
         return;
       }
-
-      // Filter out any previous unopened attempt to this peer
-      conns = conns.filter(c => c.peer !== rid || c.open);
 
       const btnEl = document.getElementById('mp-connect-btn');
       if (btnEl) {
         btnEl.textContent = 'Connecting…';
         btnEl.disabled = true;
       }
-      showToast('Connecting to teammate…');
+      showToast('Looking for your teammate…');
+
+      // Join their room on every relay network. We stay in the room, so if they open their studio
+      // later the connection still completes by itself.
+      joinRoomEverywhere(rid, 'joiner');
 
       clearTimeout(connectTimeout);
-      try {
-        const conn = peer.connect(rid, {
-          reliable: true,
-          serialization: 'json'
-        });
-        pendingConn = conn;
-
-        // Timeout after 12s if connection doesn't open
-        connectTimeout = setTimeout(() => {
-          if (pendingConn === conn && !conn.open) {
-            if (btnEl) {
-              btnEl.textContent = 'Connect';
-              btnEl.disabled = false;
-            }
-            showToast('Connection timed out. Teammate might be offline, or a strict network is blocking the direct link (a TURN relay fixes that).');
-            try { conn.close(); } catch (e) { }
-            pendingConn = null;
-            conns = conns.filter(c => c !== conn && c.peer !== rid);
-            updateMpUI();
-            if (isViewMode && !_viewConnected) {
-              lastPeerError = 'direct link timed out';
-              scheduleViewRetry();
-            }
-          }
-        }, 12000);
-
-        setupConn(conn, true);
-      } catch (e) {
-        console.error('Peer connect error:', e);
-        if (btnEl) {
-          btnEl.textContent = 'Connect';
-          btnEl.disabled = false;
+      connectTimeout = setTimeout(() => {
+        if (btnEl) { btnEl.textContent = 'Connect'; btnEl.disabled = false; }
+        if (!conns.some(c => c._roomId === rid && c.open)) {
+          lastPeerError = 'nobody answered in the room yet';
+          showToast('Teammate not found yet. Their studio tab must be open. Still listening…');
+          if (isViewMode && !_viewConnected) viewShowFailure();
         }
-        showToast('Connection failed: ' + (e.message || 'unknown error'));
-      }
+      }, CONNECT_PATIENCE);
     }
 
     // ── Large messages ──
@@ -3679,45 +3655,27 @@
       clearTimeout(_viewConnectTimer);
     }
 
-    let _viewRetries = 0;
-
-    // Explains the real reason the viewer is stuck instead of one generic message.
+    // Explains the real reason the viewer is still waiting instead of one generic message.
     function viewShowFailure() {
       if (_viewConnected) return;
-      if (!peerOpened) {
-        const srv = currentSignaling();
-        showViewOverlay('Could not reach the signaling server',
-          srv.host + ' is not answering (' + (lastPeerError || 'no response') + '). Still retrying automatically. If this keeps happening, ask the designer for the standalone .html version.', true);
+      if (relaysAllFailed()) {
+        showViewOverlay('Could not start peer-to-peer',
+          'The connection library could not load (' + relaySummary() + '). Check your internet or ad-blocker, or ask the designer for the standalone .html version.', true);
       } else {
-        showViewOverlay('Could not reach the designer',
-          'The signaling server is fine, but the direct link to the designer failed (' + (lastPeerError || 'no response') + '). The designer must keep the studio tab open; a strict network may also need a TURN relay.', true);
+        showViewOverlay('Still looking for the designer…',
+          'Their studio tab must be open. Searching relay networks (' + relaySummary() + '). Keep this tab open; it connects automatically when they appear.', true);
       }
-    }
-
-    // While the viewer is not connected yet, keep trying every few seconds (designer may be
-    // opening the studio right now, or a cold-starting server is still waking up).
-    function scheduleViewRetry() {
-      if (!_viewerSession || _viewConnected || !_viewJoinId || _viewRetries >= 8) return;
-      _viewRetries++;
-      setTimeout(() => {
-        if (!_viewConnected && peer && peer.open && !peer.disconnected) connectToPeer(_viewJoinId);
-      }, 4000);
     }
 
     function viewRetryConnect() {
       if (!_viewJoinId) return;
-      _viewRetries = 0;
-      showViewOverlay('Retrying connection…', 'Trying to reach the designer\'s canvas again.', false);
+      showViewOverlay('Retrying connection…', 'Searching for the designer again.', false);
       clearTimeout(_viewConnectTimer);
-      _viewConnectTimer = setTimeout(viewShowFailure, SIGNAL_OPEN_TIMEOUT);
-      pendingJoinRid = _viewJoinId;
-      if (peer && !peer.destroyed && peer.open && !peer.disconnected) {
-        connectToPeer(_viewJoinId);
-      } else {
-        sigRetry = 0;
-        if (peer) { try { peer.destroy(); } catch (e) { } peer = null; }
-        initPeer();
-      }
+      _viewConnectTimer = setTimeout(viewShowFailure, 20000);
+      leaveRoom(_viewJoinId);
+      // let relay networks that failed to load try again
+      RELAY_STRATEGIES.forEach(s => { if (/^failed/.test(relayStatus[s.name] || '')) { delete strategyMods[s.name]; delete relayStatus[s.name]; } });
+      connectToPeer(_viewJoinId);
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -3728,7 +3686,6 @@
         // Parse join code from hash — handle both #view&join=X and #view=&join=X formats
         const hashParams = new URLSearchParams(rawHash.replace(/^view(?=&|$)/, 'view=1'));
         _viewJoinId = hashParams.get('join') ? decodeURIComponent(hashParams.get('join')).trim() : null;
-        _viewSrv = parseInt(hashParams.get('srv'), 10) || 0;   // which signaling server the designer is on
         _viewerSession = true;
 
         document.getElementById('login-screen').style.display = 'none';
@@ -3750,7 +3707,7 @@
           _viewConnectTimer = setTimeout(viewShowFailure, 20000);
         }
 
-        // Viewers use their own per-tab peer ID (see getPeerId) so they never clash with a studio ID.
+        // Viewers host nothing; they only look for the designer's room.
         initPeer();
 
       }

@@ -2931,9 +2931,24 @@
       { name: 'mqtt', url: 'https://esm.run/@trystero-p2p/mqtt@0.25' },
       { name: 'torrent', url: 'https://esm.run/@trystero-p2p/torrent@0.25' },
     ];
-    // Strict NATs (many mobile networks) need a TURN relay for the direct link. Add yours, e.g.:
-    // { urls: ['turn:YOUR-HOST:443?transport=tcp'], username: 'USER', credential: 'PASS' }
-    const TURN_SERVERS = [];
+    // Two browsers on DIFFERENT networks usually cannot connect directly (home routers and mobile
+    // carriers sit behind NATs that block it). A TURN relay carries the already-encrypted traffic
+    // only when the direct route fails; it never stores your design. Credentials come from a free
+    // Metered account (dashboard > TURN credentials). Keep the total of STUN+TURN urls under 5,
+    // otherwise browsers slow down connection discovery.
+    const TURN_SERVERS = [
+      {
+        urls: [
+          'turn:in.relay.metered.ca:80',
+          'turn:in.relay.metered.ca:80?transport=tcp',
+          'turns:in.relay.metered.ca:443?transport=tcp'
+        ],
+        username: 'ebe7aee68f23d26adb58b86d',
+        credential: '4ZZxG9RMA2au2jlz'
+      }
+    ];
+    // Passed as rtcConfig too, so the TURN servers are used even if a library version ignores turnConfig.
+    const ICE_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }].concat(TURN_SERVERS);
     const CONNECT_PATIENCE = 30000;
 
     let _viewerSession = false;
@@ -3030,6 +3045,31 @@
       if (lc.open) { lc.open = false; lc._emit('close'); }
     }
 
+    // Messages that arrive on a path before that peer's 'hi' handshake are parked here instead of
+    // being dropped (otherwise a fast host_welcome with the canvas could be lost -> blank canvas).
+    const earlyBuf = {};      // "roomId|strategy:peerId" -> [messages]
+    const EARLY_BUF_MAX = 3000;
+
+    // Reports whether this peer is connected directly or through the TURN relay.
+    function detectRoute(lc) {
+      try {
+        const p = lc._paths[0];
+        const peers = p && p.entry.room.getPeers ? p.entry.room.getPeers() : null;
+        const pc = peers && peers[p.pid];
+        if (!pc || typeof pc.getStats !== 'function') return;
+        pc.getStats().then(report => {
+          let pair = null;
+          report.forEach(r => { if (r.type === 'transport' && r.selectedCandidatePairId) pair = report.get(r.selectedCandidatePairId); });
+          if (!pair) report.forEach(r => { if (r.type === 'candidate-pair' && r.state === 'succeeded' && (r.nominated || r.selected)) pair = r; });
+          if (!pair) return;
+          const loc = report.get(pair.localCandidateId), rem = report.get(pair.remoteCandidateId);
+          const viaRelay = !!((loc && loc.candidateType === 'relay') || (rem && rem.candidateType === 'relay'));
+          lc._route = viaRelay ? 'relay' : 'direct';
+          showToast(viaRelay ? 'Connected through the relay (your networks block direct links)' : 'Connected directly, peer to peer');
+        }).catch(() => { });
+      } catch (e) { }
+    }
+
     function addPath(rec, entry, pid, uid) {
       const key = rec.role + ':' + uid;
       let lc = logical[key];
@@ -3037,9 +3077,13 @@
         lc = logical[key] = makeLogicalConn(uid, rec.role === 'joiner', rec.roomId, key);
         setupConn(lc, lc._isOut);
         lc._paths.push({ entry, pid });
-        pathOwner[ownerKey(rec.roomId, entry, pid)] = lc;
+        const ok = ownerKey(rec.roomId, entry, pid);
+        pathOwner[ok] = lc;
         lc.open = true;
         lc._emit('open');
+        setTimeout(() => detectRoute(lc), 2000);
+        const parked = earlyBuf[ok];
+        if (parked) { delete earlyBuf[ok]; parked.forEach(m => lc._emit('data', m)); }
         return;
       }
       if (!lc._paths.some(p => p.entry === entry && p.pid === pid)) lc._paths.push({ entry, pid });
@@ -3050,6 +3094,7 @@
       const k = ownerKey(rec.roomId, entry, pid);
       const lc = pathOwner[k];
       delete pathOwner[k];
+      delete earlyBuf[k];
       if (!lc) return;
       lc._paths = lc._paths.filter(p => !(p.entry === entry && p.pid === pid));
       if (lc._paths.length === 0) closeLogical(lc);
@@ -3066,8 +3111,11 @@
         addPath(rec, entry, pid, data.uid);
         return;
       }
-      const lc = pathOwner[ownerKey(rec.roomId, entry, pid)];
-      if (lc) lc._emit('data', data);
+      const ok = ownerKey(rec.roomId, entry, pid);
+      const lc = pathOwner[ok];
+      if (lc) { lc._emit('data', data); return; }
+      const q = earlyBuf[ok] || (earlyBuf[ok] = []);
+      if (q.length < EARLY_BUF_MAX) q.push(data);
     }
 
     function joinRoomEverywhere(roomId, role) {
@@ -3078,7 +3126,10 @@
           if (!mod || rooms[roomId] !== rec) return;
           try {
             const cfg = { appId: TRYSTERO_APP_ID };
-            if (TURN_SERVERS.length) cfg.turnConfig = TURN_SERVERS;
+            if (TURN_SERVERS.length) {
+              cfg.turnConfig = TURN_SERVERS;
+              cfg.rtcConfig = { iceServers: ICE_SERVERS };
+            }
             const room = mod.joinRoom(cfg, roomId);
             const act = room.makeAction('m');
             const entry = { name: s.name, room, act };
@@ -3663,7 +3714,7 @@
           'The connection library could not load (' + relaySummary() + '). Check your internet or ad-blocker, or ask the designer for the standalone .html version.', true);
       } else {
         showViewOverlay('Still looking for the designer…',
-          'Their studio tab must be open. Searching relay networks (' + relaySummary() + '). Keep this tab open; it connects automatically when they appear.', true);
+          'Their studio tab must be open. Searching relay networks (' + relaySummary() + '). Keep this tab open; it connects automatically when they appear. If it never does, both of you are behind networks that block even the relay path; try the other person on a different network or ask for the standalone .html.', true);
       }
     }
 

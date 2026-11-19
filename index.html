@@ -545,6 +545,9 @@
     }
 
     /* ELEMENTS */
+    #app.hand-mode .el, #app.hand-mode #cw { cursor: grab !important; }
+    #app.hand-mode .rh { display: none !important; }
+    #app.hand-mode .el:hover:not(.sel) { outline: none; }
     .el {
       position: absolute;
       border: 1px solid transparent;
@@ -571,7 +574,7 @@
       top: -20px;
       left: 0;
       font-size: 11px;
-      color: #666;
+      color: #8d8d95;
       white-space: nowrap;
       pointer-events: none;
       font-weight: 500;
@@ -1149,9 +1152,14 @@
 
       <!-- Tools -->
       <div class="edit-only" style="display:flex;align-items:center;gap:2px">
-        <button class="tb on" data-tool="select" data-tip="Select (V)">
+        <button class="tb on" data-tool="select" data-tip="Move (V)">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
             <path d="M1 1l9.5 5.5-4.2 1.2L5 13z" />
+          </svg>
+        </button>
+        <button class="tb" data-tool="hand" data-tip="Hand (H) · or hold Space">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5.5 8V3.4a1 1 0 0 1 2 0V7M7.5 6.6V2.6a1 1 0 0 1 2 0V7M9.5 6.8V3.6a1 1 0 0 1 2 0V9.5c0 2.6-1.6 4.5-4.2 4.5-1.6 0-2.6-.6-3.5-1.8L2 9.6a1 1 0 0 1 1.6-1.2L5.5 10.4"/>
           </svg>
         </button>
         <div class="tsep"></div>
@@ -2638,11 +2646,11 @@
     // ═══════════════════════════════════════════════════
     CW.addEventListener('mousedown', e => {
       if (e.button !== 0 && e.button !== 1) return;
+      if (ui.tool === 'hand' || ui.spaceHand) { if (e.button === 0 || e.button === 1) { e.preventDefault(); startPan(e); } return; }
       const isBg = e.target === CW || e.target === CV || e.target.id === 'cbg' || e.target.id === 'snap-ov' || e.target.id === 'cursor-ov' || e.target === document.getElementById('asvg');
       if (!isBg) return;
       if (e.button === 1 || e.altKey) { e.preventDefault(); startPan(e); return; }
-      if (ui.tool === 'select' && e.shiftKey) { startMarquee(e); return; }
-      if (ui.tool === 'select') { startPan(e); deselAll(); return; }
+      if (ui.tool === 'select') { startMarquee(e); return; }   // drag on empty canvas = box select (pan with H, Space or middle mouse)
       if (ui.tool === 'connect') return;
       startDraw(e);
     });
@@ -2690,8 +2698,10 @@
     //  MOUSE — ELEMENT
     // ═══════════════════════════════════════════════════
     function onElDown(e) {
+      if (e.button === 1) { e.preventDefault(); e.stopPropagation(); startPan(e); return; }
       if (e.button !== 0) return;
       e.stopPropagation();
+      if (!isViewMode && (ui.tool === 'hand' || ui.spaceHand)) { e.preventDefault(); startPan(e); return; }
       if (isViewMode) {
         let t = e.target;
         while (t && !t.classList.contains('el')) t = t.parentElement;
@@ -2743,7 +2753,7 @@
     }
 
     function onElDbl(e) {
-      if (isViewMode) return;
+      if (isViewMode || ui.tool === 'hand' || ui.spaceHand) return;
       let t = e.target;
       while (t && !t.classList.contains('el')) t = t.parentElement;
       if (!t) return;
@@ -2843,7 +2853,7 @@
     function onUp(e) {
       clearSnap();
       if (ui.marq) endMarquee();
-      if (ui.isPan) { ui.isPan = false; CW.style.cursor = ui.tool === 'select' ? 'default' : 'crosshair'; }
+      if (ui.isPan) { ui.isPan = false; CW.style.cursor = toolCursor(); }
       if (ui.isResize) {
         ui.isResize = false;
         const sb = document.getElementById('sb-' + ui.rzEl?.id);
@@ -2863,7 +2873,7 @@
         ui.pendingCollapse = null;
         syncMountsSoon();
         ui.dragEl = null;
-        CW.style.cursor = ui.tool === 'select' ? 'default' : 'crosshair';
+        CW.style.cursor = toolCursor();
         renderConns(); updateProps();
       }
       if (ui.isDraw && ui.dwPrev) {
@@ -2893,8 +2903,12 @@
         if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); nextScreen(); return; }
         if (e.key === 'Escape') { e.preventDefault(); togglePresentMode(false); return; }
       }
+      if (!inp && !isViewMode && e.key === ' ' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        if (!ui.spaceHand) { ui.spaceHand = true; syncHandMode(); }
+      }
       if (!inp) {
-        const tk = { v: 'select', f: 'frame', r: 'rect', e: 'ellipse', t: 'text', s: 'sticky', c: 'connect' };
+        const tk = { v: 'select', h: 'hand', f: 'frame', r: 'rect', e: 'ellipse', t: 'text', s: 'sticky', c: 'connect' };
         if (!e.ctrlKey && !e.metaKey && !e.altKey && tk[e.key.toLowerCase()]) setTool(tk[e.key.toLowerCase()]);
         if (e.key === 'Delete' || e.key === 'Backspace') {
           if (ui.multi.size > 1) { delSelected(); e.preventDefault(); }
@@ -2931,13 +2945,21 @@
       }
     });
 
+    document.addEventListener('keyup', e => { if (e.key === ' ' && ui.spaceHand) { ui.spaceHand = false; syncHandMode(); } });
+    window.addEventListener('blur', () => { if (ui.spaceHand) { ui.spaceHand = false; syncHandMode(); } });
+
     // ═══════════════════════════════════════════════════
     //  TOOLS
     // ═══════════════════════════════════════════════════
+    function toolCursor() { return (ui.tool === 'hand' || ui.spaceHand) ? 'grab' : (ui.tool === 'select' ? 'default' : 'crosshair'); }
+    function syncHandMode() {
+      document.getElementById('app').classList.toggle('hand-mode', ui.tool === 'hand' || !!ui.spaceHand);
+      CW.style.cursor = toolCursor();
+    }
     function setTool(t) {
       ui.tool = t;
       document.querySelectorAll('.tb[data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
-      CW.style.cursor = t === 'select' ? 'default' : 'crosshair';
+      syncHandMode();
     }
     document.querySelectorAll('.tb[data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
 
@@ -3436,6 +3458,8 @@
           '<style>html,body{margin:0;height:100%}</style></head><body>' + body + '</body></html>';
       }
       // the SVG attributes the Claude canvas writes in a special form
+      // <sc-raw-select> etc. are plain HTML tags in disguise
+      html = html.replace(/<(\/?)sc-raw-([a-z0-9]+)/gi, '<$1$2');
       html = html.replace(/\bsc-camel-([a-z-]+)=/g, (m, n) => n.replace(/-([a-z])/g, (x, c) => c.toUpperCase()) + '=');
       // Inter was served from the artifact's private storage; use the public font instead
       const before = html.length;

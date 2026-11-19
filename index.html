@@ -1604,11 +1604,23 @@
     //  SAVE / LOAD
     // ═══════════════════════════════════════════════════
     function saveProject() {
-      localStorage.setItem(SK, JSON.stringify({ S }));
+      // Browser storage is small (~5 MB). A design with big HTML or images can exceed it, and an
+      // uncaught error here used to abort whatever called us (e.g. a viewer's canvas load).
+      let json = '';
+      try { json = JSON.stringify({ S }); } catch (e) { return false; }
+      try { localStorage.setItem(SK, json); }
+      catch (e) {
+        try { localStorage.removeItem('ligmadesign_backup'); localStorage.setItem(SK, json); }
+        catch (e2) {
+          showToast('Browser storage is full, so this design is not auto-saved. Use Share / Export to keep a copy.');
+          return false;
+        }
+      }
       if (S.elements && S.elements.length > 0) {
-        try { localStorage.setItem('ligmadesign_backup', JSON.stringify({ S })); } catch (e) { }
+        try { localStorage.setItem('ligmadesign_backup', json); } catch (e) { }
       }
       showToast('Saved');
+      return true;
     }
     function loadProject() {
       try {
@@ -2308,7 +2320,14 @@
       <div class="pr"><textarea class="pi" rows="4" onchange="sp(${el.id},'text',this.value)">${esc(el.text || '')}</textarea></div>
       <div class="pr"><span class="pl">Color</span><input type="color" class="cs" value="${el.fill || '#fef08a'}" oninput="sp(${el.id},'fill',this.value)"></div>
     </div>`: ''}
-    ${el.type === 'frame' && el.html ? `<div class="ps"><button class="btn" style="width:100%" onclick="loadHtmlPanel(${el.id})">Load HTML into panel</button></div>` : ''}
+    ${el.isImage ? `<div class="ps"><div class="stitle">Image fit</div>
+      <div class="pr"><select class="pi" onchange="setImgFit(${el.id},this.value)">
+        <option value="cover"${(el.imgFit || 'cover') === 'cover' ? ' selected' : ''}>Fill frame (crop edges)</option>
+        <option value="contain"${el.imgFit === 'contain' ? ' selected' : ''}>Fit whole image</option>
+        <option value="fill"${el.imgFit === 'fill' ? ' selected' : ''}>Stretch</option>
+      </select></div>
+    </div>` : ''}
+    ${el.type === 'frame' && el.html && !el.isImage ? `<div class="ps"><button class="btn" style="width:100%" onclick="loadHtmlPanel(${el.id})">Load HTML into panel</button></div>` : ''}
     <div class="ps">
       <button class="btn" style="width:100%;margin-bottom:5px" onclick="dupEl(${el.id})">Duplicate</button>
       <button class="btn" style="width:100%;color:#ff6b6b;border-color:#666" onclick="delEl(${el.id});renderAll()">Delete</button>
@@ -2465,7 +2484,7 @@
         const v = prompt('Edit text:', el.text || '');
         if (v !== null) { el.text = v; refreshEl(id); updateProps(); }
       }
-      if (el.type === 'frame') loadHtmlPanel(id);
+      if (el.type === 'frame' && !el.isImage) loadHtmlPanel(id);
     }
 
     function onElCtx(e) {
@@ -2614,8 +2633,8 @@
         if (e.key === 's') { e.preventDefault(); saveProject(); }
         if (!inp) {
           if (e.key === 'd') { e.preventDefault(); if (ui.selId) dupEl(ui.selId); }
-          if (e.key === 'c') { const el = getEl(ui.selId); if (el) ui.clipboard = el; }
-          if (e.key === 'v') pasteEl();
+          if (e.key === 'c') copyEl(ui.selId);
+          // Ctrl+V is handled by the 'paste' event (it can carry an image from the clipboard)
         }
         if (e.key === '=' || e.key === '+') { e.preventDefault(); S.camera.zoom = Math.min(S.camera.zoom * 1.2, 32); renderCamera(); }
         if (e.key === '-') { e.preventDefault(); S.camera.zoom = Math.max(S.camera.zoom / 1.2, 0.04); renderCamera(); }
@@ -2649,39 +2668,14 @@
       const h = parseInt(document.getElementById('hh').value) || 844;
       const customName = (document.getElementById('hname') ? document.getElementById('hname').value.trim() : '');
 
-      let posX, posY;
-      const frames = S.elements.filter(e => e.type === 'frame' && !e.hidden);
-
-      if (frames.length > 0) {
-        // If a frame is selected, place to its right; otherwise place to the right of the rightmost frame
-        const selFrame = frames.find(e => e.id === ui.selId);
-        let refFrame = selFrame;
-        if (!refFrame) {
-          refFrame = frames.reduce((best, cur) => (cur.x + cur.w > best.x + best.w) ? cur : best, frames[0]);
-        }
-        const GAP = 50; // 50px gap between frames
-        posX = refFrame.x + refFrame.w + GAP;
-        posY = refFrame.y; // Top-aligned with previous frame
-      } else {
-        // First frame: center in current viewport
-        const r = CW.getBoundingClientRect();
-        const p = s2c(r.left + r.width / 2, r.top + r.height / 2);
-        posX = p.x - w / 2;
-        posY = p.y - h / 2;
-      }
+      const { x: posX, y: posY } = nextFramePos(w, h);
 
       const el = mkEl('frame', posX, posY, w, h, { html, label: customName || undefined });
       addElToCanvas(el);
       setTool('select');
       broadcast({ type: 'el_add', el: { ...el } });
 
-      // If the new frame extends past the right of current screen, smoothly pan camera
-      const r = CW.getBoundingClientRect();
-      const screenRight = c2s(posX + w, posY).x;
-      if (screenRight > r.right - 40) {
-        S.camera.x -= (screenRight - (r.right - 60));
-        renderCamera();
-      }
+      panToShow(posX + w, posY);
 
       showToast('Frame added: ' + el.label);
     }
@@ -2700,6 +2694,160 @@
     }
 
     // ═══════════════════════════════════════════════════
+    //  PASTE IMAGES  ->  a frame at the selected device size
+    //  Ctrl/Cmd+V with an image on the clipboard (screenshot, "Copy image", etc.) adds a new frame
+    //  sized to the Device W x H in the right panel and puts the image in it. The picture is
+    //  downscaled/compressed first so it stays light for saving and for live sharing.
+    // ═══════════════════════════════════════════════════
+    const IMG_MAX_FILE = 30 * 1024 * 1024;  // refuse absurdly large pastes
+    const IMG_TARGET_CHARS = 700000;        // aim for <= ~0.7M characters of data per image
+    const IMG_HARD_CAP_CHARS = 2500000;     // never store more than this per image
+    const IMG_MAX_SIDE = 2560;
+
+    function imgFitCss(fit) {
+      if (fit === 'contain') return 'object-fit:contain;object-position:center center';
+      if (fit === 'fill') return 'object-fit:fill;object-position:center center';
+      return 'object-fit:cover;object-position:center top';   // top-aligned so headers are not cropped
+    }
+
+    function imageHtml(src, fit) {
+      return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'
+        + 'html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent}'
+        + 'img{display:block;width:100%;height:100%;' + imgFitCss(fit) + '}'
+        + '</style></head><body><img alt="" src="' + src + '"></body></html>';
+    }
+
+    function canvasHasAlpha(ctx, w, h) {
+      try {
+        const d = ctx.getImageData(0, 0, w, h).data;
+        for (let i = 3; i < d.length; i += 4) if (d[i] < 255) return true;
+      } catch (e) { }
+      return false;
+    }
+
+    // Reads an image blob and returns a compact data URL (WebP, or JPEG/PNG where WebP is unavailable).
+    async function compressImage(file, w, h) {
+      const url = URL.createObjectURL(file);
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error('The browser could not read that image'));
+          i.src = url;
+        });
+        const nw = img.naturalWidth || 300, nh = img.naturalHeight || 300;
+        // Enough pixels for a sharp 2x display of the frame; never upscale; cap the longest side.
+        let scale = Math.min(1, Math.max((2 * w) / nw, (2 * h) / nh), IMG_MAX_SIDE / Math.max(nw, nh));
+        let q = 0.88, out = '';
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const cw = Math.max(1, Math.round(nw * scale)), ch = Math.max(1, Math.round(nh * scale));
+          const c = document.createElement('canvas');
+          c.width = cw; c.height = ch;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, cw, ch);
+          out = c.toDataURL('image/webp', q);
+          if (!out.startsWith('data:image/webp')) {
+            // This browser cannot encode WebP (Safari): keep transparency as PNG, otherwise JPEG on white.
+            if (canvasHasAlpha(ctx, cw, ch)) {
+              out = c.toDataURL('image/png');
+            } else {
+              const j = document.createElement('canvas');
+              j.width = cw; j.height = ch;
+              const jc = j.getContext('2d');
+              jc.fillStyle = '#fff'; jc.fillRect(0, 0, cw, ch); jc.drawImage(img, 0, 0, cw, ch);
+              out = j.toDataURL('image/jpeg', q);
+            }
+          }
+          if (out.length <= IMG_TARGET_CHARS) break;
+          scale *= 0.8; q = Math.max(0.6, q - 0.08);
+        }
+        if (out.length > IMG_HARD_CAP_CHARS) throw new Error('That image is too detailed to store; try a smaller one');
+        return out;
+      } finally { URL.revokeObjectURL(url); }
+    }
+
+    // Where the next frame goes: right of the selected frame (or the right-most one), else viewport centre.
+    function nextFramePos(w, h) {
+      const frames = S.elements.filter(e => e.type === 'frame' && !e.hidden);
+      if (frames.length > 0) {
+        let refFrame = frames.find(e => e.id === ui.selId);
+        if (!refFrame) refFrame = frames.reduce((best, cur) => (cur.x + cur.w > best.x + best.w) ? cur : best, frames[0]);
+        const GAP = 50; // 50px gap between frames
+        return { x: refFrame.x + refFrame.w + GAP, y: refFrame.y };
+      }
+      const r = CW.getBoundingClientRect();
+      const p = s2c(r.left + r.width / 2, r.top + r.height / 2);
+      return { x: p.x - w / 2, y: p.y - h / 2 };
+    }
+
+    // If a new frame extends past the right edge of the screen, smoothly pan the camera.
+    function panToShow(rightX, y) {
+      const r = CW.getBoundingClientRect();
+      const screenRight = c2s(rightX, y).x;
+      if (screenRight > r.right - 40) {
+        S.camera.x -= (screenRight - (r.right - 60));
+        renderCamera();
+      }
+    }
+
+    async function addImageFrame(file) {
+      if (file.size > IMG_MAX_FILE) throw new Error('That image is over 30 MB');
+      const w = parseInt(document.getElementById('hw').value) || 390;
+      const h = parseInt(document.getElementById('hh').value) || 844;
+      const src = await compressImage(file, w, h);
+      const pos = nextFramePos(w, h);
+      const el = mkEl('frame', pos.x, pos.y, w, h, { html: imageHtml(src, 'cover'), isImage: true, imgFit: 'cover' });
+      const custom = document.getElementById('hname') ? document.getElementById('hname').value.trim() : '';
+      el.label = custom || ('Image ' + el.id);
+      addElToCanvas(el);
+      setTool('select');
+      broadcast({ type: 'el_add', el: { ...el } });
+      panToShow(pos.x + w, pos.y);
+      showToast('Image added as ' + w + '×' + h + ' (' + Math.round(src.length / 1024) + ' KB)');
+    }
+
+    async function pasteImages(files) {
+      if (isViewMode) return;
+      files = files.slice(0, 10);
+      showToast(files.length > 1 ? 'Adding ' + files.length + ' images…' : 'Adding image…');
+      for (const f of files) {
+        try { await addImageFrame(f); }
+        catch (err) { console.warn('Image paste failed', err); showToast((err && err.message) || 'Could not add that image'); }
+      }
+    }
+
+    function setImgFit(id, fit) {
+      const el = getEl(id);
+      if (!el || !el.isImage) return;
+      el.imgFit = fit;
+      el.html = el.html.replace(/object-fit:[a-z-]+;object-position:[a-z ]+/, imgFitCss(fit));
+      refreshEl(id); updateProps();
+      broadcast({ type: 'el_update', el: { ...el } });
+    }
+
+    // One handler for every Ctrl/Cmd+V: an image on the clipboard becomes a frame; otherwise the
+    // in-app copied element is pasted (that used to be done on keydown).
+    document.addEventListener('paste', e => {
+      if (isViewMode) return;
+      const t = e.target;
+      const inField = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
+      const cd = e.clipboardData;
+      const files = [];
+      if (cd && cd.items) {
+        for (const it of cd.items) {
+          if (it.kind === 'file' && it.type && it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) files.push(f); }
+        }
+      }
+      if (files.length === 0) {
+        if (!inField && ui.clipboard) { e.preventDefault(); pasteEl(); }
+        return;
+      }
+      if (inField && cd.getData('text/plain')) return;   // real text going into a text box: let it paste normally
+      e.preventDefault();
+      pasteImages(files);
+    });
+
+    // ═══════════════════════════════════════════════════
     //  DUPLICATE / PASTE
     // ═══════════════════════════════════════════════════
     function dupEl(id) {
@@ -2707,11 +2855,19 @@
       const el = mkEl(src.type, src.x + 20, src.y + 20, src.w, src.h, {
         fill: src.fill, text: src.text, html: src.html, label: src.label + ' copy',
         opacity: src.opacity, fontSize: src.fontSize, fontWeight: src.fontWeight, cornerRadius: src.cornerRadius,
+        isImage: src.isImage, imgFit: src.imgFit,
       });
       addElToCanvas(el);
       broadcast({ type: 'el_add', el: { ...el } });
     }
     function pasteEl() { if (ui.clipboard) dupEl(ui.clipboard.id); }
+    function copyEl(id) {
+      const el = getEl(id); if (!el) return;
+      ui.clipboard = el;
+      // Also overwrite the system clipboard, so an older screenshot sitting there is not pasted
+      // as an image instead of this element.
+      try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(el.label || 'Ligma element').catch(() => { }); } catch (e) { }
+    }
 
     // ═══════════════════════════════════════════════════
     //  CONTEXT MENU & RENAME
@@ -2756,7 +2912,7 @@
       if (a === 'rename') { if (id) renameEl(id); }
       if (a === 'del') { if (id) { delEl(id); broadcast({ type: 'el_del', id }); } }
       if (a === 'dup') { if (id) dupEl(id); }
-      if (a === 'copy') { const el = getEl(id); if (el) ui.clipboard = el; }
+      if (a === 'copy') copyEl(id);
       if (a === 'paste') pasteEl();
       if (a === 'front') {
         const el = getEl(id);

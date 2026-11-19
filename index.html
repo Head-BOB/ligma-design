@@ -1073,6 +1073,85 @@
       background: #444;
       border-radius: 3px;
     }
+    #er-view-btn { display: none; }
+    #app.view-mode #er-view-btn.has { display: inline-block; }
+    #er-app.ro .er-wr { display: none !important; }
+    #er-app.ro #er-code { cursor: default; }
+    #er-app .ro-tag { display: none; font-size: 11px; font-weight: 600; color: var(--e-text2); border: 1px solid var(--e-border); border-radius: 6px; padding: 3px 8px; }
+    #er-app.ro .ro-tag { display: inline-block; }
+    /* ───────── ER DIAGRAM SCREEN ───────── */
+    #new-menu { position: fixed; z-index: 4000; display: none; min-width: 232px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 6px; box-shadow: 0 14px 40px rgba(0,0,0,.45); }
+    #new-menu.on { display: block; }
+    #new-menu button { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: transparent; border: 0; color: var(--text); font: inherit; font-size: 12.5px; padding: 8px 9px; border-radius: 7px; cursor: pointer; }
+    #new-menu button:hover { background: var(--panel2); }
+    #new-menu small { display: block; color: var(--text2); font-size: 11px; margin-top: 1px; }
+    #new-menu .nm-ic { width: 28px; height: 28px; border-radius: 7px; background: var(--panel2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    #er-app { position: fixed; inset: 0; z-index: 3000; display: none; flex-direction: column; font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif; --e-bg: #ffffff; --e-panel: #ffffff; --e-panel2: #f5f6f8; --e-border: #e4e6eb; --e-text: #1b1f27; --e-text2: #7b8394; --e-dot: #e3e5ea; --e-code: #fbfbfc; --e-accent: #5b5bf0; --e-hl: rgba(91,91,240,.10); background: var(--e-bg); color: var(--e-text); }
+    #er-app[data-theme="dark"] { --e-bg: #14161b; --e-panel: #1b1e25; --e-panel2: #242832; --e-border: #2d313c; --e-text: #e8eaee; --e-text2: #8b93a5; --e-dot: #262a33; --e-code: #171a20; --e-hl: rgba(120,120,255,.16); }
+    #er-app.on { display: flex; }
+    #er-app * { box-sizing: border-box; }
+    #er-top { height: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--e-panel); border-bottom: 1px solid var(--e-border); }
+    .er-btn { display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--e-border); background: var(--e-panel); color: var(--e-text); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .er-btn:hover { background: var(--e-panel2); }
+    .er-btn.p { background: var(--e-accent); border-color: var(--e-accent); color: #fff; }
+    .er-btn.p:hover { filter: brightness(1.08); }
+    .er-btn.ic { width: 32px; padding: 0; justify-content: center; }
+    .er-btn.on { background: var(--e-hl); border-color: var(--e-accent); color: var(--e-accent); }
+    #er-title { border: 1px solid transparent; background: transparent; color: var(--e-text); font: inherit; font-size: 14px; font-weight: 600; height: 32px; padding: 0 8px; border-radius: 7px; width: 240px; outline: 0; }
+    #er-title:hover { border-color: var(--e-border); }
+    #er-title:focus { border-color: var(--e-accent); background: var(--e-panel2); }
+    #er-picker { height: 32px; border: 1px solid var(--e-border); background: var(--e-panel); color: var(--e-text2); border-radius: 8px; font: inherit; font-size: 12px; padding: 0 6px; max-width: 150px; outline: 0; }
+    .er-sp { flex: 1; }
+    .er-seg { display: inline-flex; border: 1px solid var(--e-border); border-radius: 8px; overflow: hidden; }
+    .er-seg button { height: 30px; padding: 0 11px; border: 0; background: transparent; color: var(--e-text2); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }
+    .er-seg button.on { background: var(--e-hl); color: var(--e-accent); }
+    #er-body { flex: 1; display: flex; min-height: 0; }
+    #er-left { width: 400px; flex-shrink: 0; display: flex; flex-direction: column; background: var(--e-code); border-right: 1px solid var(--e-border); min-width: 220px; }
+    #er-left.shut { display: none; }
+    #er-lhead { height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--e-text2); border-bottom: 1px solid var(--e-border); }
+    #er-editor { position: relative; flex: 1; min-height: 0; display: flex; }
+    #er-gutter { width: 40px; flex-shrink: 0; overflow: hidden; padding: 12px 8px 12px 0; text-align: right; font: 12.5px/20px ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--e-text2); opacity: .55; white-space: pre; user-select: none; border-right: 1px solid var(--e-border); }
+    #er-code-wrap { position: relative; flex: 1; min-width: 0; }
+    #er-hl, #er-code { position: absolute; inset: 0; margin: 0; padding: 12px 14px; font: 12.5px/20px ui-monospace, 'SF Mono', Menlo, Consolas, monospace; white-space: pre; tab-size: 2; letter-spacing: 0; border: 0; }
+    #er-hl { overflow: hidden; pointer-events: none; color: var(--e-text); }
+    #er-code { background: transparent; color: transparent; caret-color: var(--e-text); outline: 0; resize: none; overflow: auto; }
+    #er-code::selection { background: rgba(91,91,240,.28); }
+    #er-hl .c { color: #8b93a5; font-style: italic; } #er-hl .s { color: #2f9e6b; } #er-hl .p { color: #9061f9; } #er-hl .o { color: #e07b1f; font-weight: 700; } #er-hl .k { color: #c2410c; font-weight: 600; } #er-hl .e { color: #3b6ef0; font-weight: 700; } #er-hl .m { color: #c58a00; }
+    #er-app[data-theme="dark"] #er-hl .s { color: #6ee7a8; } #er-app[data-theme="dark"] #er-hl .p { color: #c4a7ff; } #er-app[data-theme="dark"] #er-hl .e { color: #8fb0ff; } #er-app[data-theme="dark"] #er-hl .k { color: #fdba74; } #er-app[data-theme="dark"] #er-hl .m { color: #fbbf24; }
+    #er-hl .ln { background: var(--e-hl); display: inline-block; width: 100%; margin: 0 -14px; padding: 0 14px; }
+    #er-errs { flex-shrink: 0; max-height: 120px; overflow: auto; border-top: 1px solid var(--e-border); background: var(--e-panel); font-size: 12px; }
+    #er-errs div { padding: 6px 12px; color: #d4380d; border-bottom: 1px solid var(--e-border); cursor: pointer; }
+    #er-errs div:last-child { border-bottom: 0; }
+    #er-resizer { width: 5px; margin-left: -3px; cursor: col-resize; flex-shrink: 0; z-index: 3; }
+    #er-resizer:hover { background: var(--e-accent); opacity: .5; }
+    #er-canvas { position: relative; flex: 1; min-width: 0; overflow: hidden; background-color: var(--e-bg); background-image: radial-gradient(circle, var(--e-dot) 1.2px, transparent 1.3px); cursor: default; touch-action: none; }
+    #er-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; user-select: none; }
+    #er-svg .er-ent { cursor: grab; }
+    #er-svg .er-ent.drag { cursor: grabbing; }
+    #er-empty { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; color: var(--e-text2); font-size: 13px; line-height: 1.7; pointer-events: none; }
+    #er-zoom { position: absolute; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 2px; background: var(--e-panel); border: 1px solid var(--e-border); border-radius: 10px; padding: 3px; box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+    #er-zoom button { height: 28px; min-width: 28px; padding: 0 8px; border: 0; background: transparent; color: var(--e-text); border-radius: 7px; font: inherit; font-size: 12px; cursor: pointer; }
+    #er-zoom button:hover { background: var(--e-panel2); }
+    #er-zoom span { min-width: 46px; text-align: center; font-size: 12px; color: var(--e-text2); }
+    #er-stats { position: absolute; left: 14px; bottom: 14px; font-size: 11.5px; color: var(--e-text2); background: var(--e-panel); border: 1px solid var(--e-border); border-radius: 8px; padding: 5px 10px; }
+    .er-modal { position: absolute; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; background: rgba(10,12,18,.45); }
+    .er-modal.on { display: flex; }
+    .er-card { width: 640px; max-width: calc(100vw - 40px); max-height: calc(100vh - 60px); display: flex; flex-direction: column; background: var(--e-panel); border: 1px solid var(--e-border); border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,.35); }
+    .er-card h2 { margin: 0; padding: 18px 20px 4px; font-size: 17px; letter-spacing: -.01em; }
+    .er-card .sub { padding: 0 20px 12px; font-size: 12.5px; color: var(--e-text2); line-height: 1.55; }
+    .er-card .bd { padding: 0 20px; overflow: auto; }
+    .er-card .ft { padding: 14px 20px 18px; display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+    #er-imp-ta { width: 100%; height: 250px; resize: vertical; background: var(--e-code); color: var(--e-text); border: 1px solid var(--e-border); border-radius: 10px; padding: 12px; font: 12.5px/1.55 ui-monospace, 'SF Mono', Menlo, Consolas, monospace; outline: 0; white-space: pre; tab-size: 2; }
+    #er-imp-ta:focus { border-color: var(--e-accent); }
+    #er-imp-drop { margin: 0 0 10px; border: 1.5px dashed var(--e-border); border-radius: 10px; padding: 14px; text-align: center; color: var(--e-text2); font-size: 12.5px; background: var(--e-panel2); }
+    #er-imp-drop.over { border-color: var(--e-accent); background: var(--e-hl); }
+    .er-row { display: flex; align-items: center; gap: 10px; margin: 10px 0 0; font-size: 12.5px; color: var(--e-text2); }
+    .er-row select { height: 30px; border: 1px solid var(--e-border); border-radius: 8px; background: var(--e-panel); color: var(--e-text); font: inherit; font-size: 12.5px; padding: 0 8px; outline: 0; }
+    .er-exp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 4px 20px 20px; }
+    .er-exp button { text-align: left; padding: 14px; border-radius: 12px; border: 1px solid var(--e-border); background: var(--e-panel); color: var(--e-text); font: inherit; cursor: pointer; }
+    .er-exp button:hover { border-color: var(--e-accent); background: var(--e-hl); }
+    .er-exp b { display: block; font-size: 13.5px; margin-bottom: 3px; } .er-exp span { font-size: 12px; color: var(--e-text2); }
   </style>
 </head>
 
@@ -1150,6 +1229,10 @@
         <circle cx="23" cy="23" r="4" fill="white" />
       </svg>
 
+      <button class="btn edit-only" id="new-btn" onclick="ERV.toggleNew(this)" title="Create something new" style="margin-right:6px">New
+        <svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="margin-left:5px"><path d="M2 3.5l3 3 3-3"/></svg>
+      </button>
+
       <!-- Tools -->
       <div class="edit-only" style="display:flex;align-items:center;gap:2px">
         <button class="tb on" data-tool="select" data-tip="Move (V)">
@@ -1221,6 +1304,7 @@
 
       <!-- Right side -->
       <div class="tb-r">
+        <button class="btn" id="er-view-btn" onclick="ERV.open()" title="View the database diagrams">ER diagrams</button>
         <button class="btn" id="present-btn" onclick="togglePresentMode()">
           <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" style="margin-right:5px">
             <polygon points="2,1 9,5 2,9" />
@@ -1700,7 +1784,9 @@
     // ═══════════════════════════════════════════════════
     //  SAVE / LOAD
     // ═══════════════════════════════════════════════════
-    function saveProject() {
+    // A project is worth keeping if it has screens or any ER diagrams
+    function projHasData(x) { return !!x && Array.isArray(x.elements) && (x.elements.length > 0 || !!(x.er && x.er.diagrams && x.er.diagrams.length)); }
+    function saveProject(silent) {
       // Browser storage is small (~5 MB). A design with big HTML or images can exceed it, and an
       // uncaught error here used to abort whatever called us (e.g. a viewer's canvas load).
       let json = '';
@@ -1709,14 +1795,14 @@
       catch (e) {
         try { localStorage.removeItem('ligmadesign_backup'); localStorage.setItem(SK, json); }
         catch (e2) {
-          showToast('Browser storage is full, so this design is not auto-saved. Use Share / Export to keep a copy.');
+          if (silent !== true || !window._erFullWarned) { window._erFullWarned = true; showToast('Browser storage is full, so this design is not auto-saved. Use Share / Export to keep a copy.'); }
           return false;
         }
       }
-      if (S.elements && S.elements.length > 0) {
+      if (projHasData(S)) {
         try { localStorage.setItem('ligmadesign_backup', json); } catch (e) { }
       }
-      showToast('Saved');
+      if (silent !== true) showToast('Saved');
       return true;
     }
     function loadProject() {
@@ -1724,7 +1810,7 @@
         const r = localStorage.getItem(SK);
         if (r) {
           const d = JSON.parse(r);
-          if (d.S && Array.isArray(d.S.elements) && d.S.elements.length > 0) {
+          if (projHasData(d.S)) {
             Object.assign(S, d.S);
             S.camera = S.camera || { x: 200, y: 200, zoom: 1 };
             S.snapEnabled = S.snapEnabled !== undefined ? S.snapEnabled : true;
@@ -1734,7 +1820,7 @@
         const bk = localStorage.getItem('ligmadesign_backup');
         if (bk) {
           const db = JSON.parse(bk);
-          if (db.S && Array.isArray(db.S.elements) && db.S.elements.length > 0) {
+          if (projHasData(db.S)) {
             Object.assign(S, db.S);
             S.camera = S.camera || { x: 200, y: 200, zoom: 1 };
             S.snapEnabled = S.snapEnabled !== undefined ? S.snapEnabled : true;
@@ -1747,7 +1833,7 @@
         const bk = localStorage.getItem('ligmadesign_backup');
         if (!bk) { alert('No backup found in this browser.'); return; }
         const db = JSON.parse(bk);
-        if (db.S && Array.isArray(db.S.elements) && db.S.elements.length > 0) {
+        if (projHasData(db.S)) {
           Object.assign(S, db.S);
           renderAll();
           saveProject();
@@ -1909,6 +1995,7 @@
       }
 
       document.getElementById('app').classList.toggle('view-mode', isViewMode);
+      try { if (window.ERV) ERV.refreshBadge(); } catch (e) { }
       const pbtn = document.getElementById('present-btn');
       if (pbtn) pbtn.innerHTML = isViewMode ? 'Exit Present' : '<svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" style="margin-right:5px"><polygon points="2,1 9,5 2,9"/></svg>Present';
 
@@ -2897,6 +2984,7 @@
     //  KEYBOARD
     // ═══════════════════════════════════════════════════
     document.addEventListener('keydown', e => {
+      if (window.ERV && ERV.active) return;
       const inp = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT';
       if (isViewMode && !inp) {
         if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prevScreen(); return; }
@@ -3138,6 +3226,7 @@
     // One handler for every Ctrl/Cmd+V: an image on the clipboard becomes a frame; otherwise the
     // in-app copied element is pasted (that used to be done on keydown).
     document.addEventListener('paste', e => {
+      if (window.ERV && ERV.active) return;
       if (isViewMode) return;
       const t = e.target;
       const inField = !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable);
@@ -3503,6 +3592,7 @@
             M.project.elements.forEach(e => { const c = { ...e, id: _id(), x: e.x + off, zIndex: S.elements.length + 1 }; idMap[e.id] = c.id; S.elements.push(c); made++; });
             (M.project.connections || []).forEach(c => { if (idMap[c.from] && idMap[c.to]) S.connections.push({ id: _id(), from: idMap[c.from], to: idMap[c.to] }); });
             if (mode === 'replace' && M.project.projectName) S.projectName = M.project.projectName;
+            if (M.project.er && window.ERV) ERV.mergeEr(JSON.parse(JSON.stringify(M.project.er)), mode === 'replace');
           } else {
             const cj = M.cj, boards = (cj && cj.boards) || {};
             const useCanvas = layout === 'canvas' && cj && Object.keys(boards).length;
@@ -3955,6 +4045,8 @@
           conns.push(conn);
         }
         updateMpUI();
+        // ER diagrams travel with the project; send ours so an ER-only project still syncs (viewers never push)
+        try { if (!isViewMode && S.er && S.er.diagrams && S.er.diagrams.length) sendLarge(conn, { type: 'er_full', er: JSON.parse(JSON.stringify(S.er)) }); } catch (e) { }
 
         // Clean join param from URL hash (but keep 'view' for view mode so refresh still works)
         if (window.location.hash.includes('join=')) {
@@ -4099,6 +4191,7 @@
 
     function handleRemote(data, fromId) {
       if (data.type === 'chunk') { receiveChunk(data, fromId); return; }
+      if (typeof data.type === 'string' && data.type.indexOf('er_') === 0) { try { ERV.remote(data); } catch (e) { console.warn('ER sync failed', e); } return; }
       if (data.type === 'cursor') {
         updateRemoteCursor(fromId, data);
         return;
@@ -4246,6 +4339,7 @@
 
     function applyRemoteState(state, authorName) {
       if (!state || !Array.isArray(state.elements)) return;
+      if (state.er) { try { ERV.mergeEr(state.er); } catch (e) { } }
       // Safety guard: NEVER overwrite a non-empty canvas with 0 elements!
       if (state.elements.length === 0 && S.elements.length > 0) {
         console.warn('Ignored empty sync over non-empty canvas.');
@@ -4509,6 +4603,1024 @@
     });
     console.log('%c Ligma Design ', 'background:#0d99ff;color:white;font-size:13px;font-weight:bold;border-radius:4px;padding:2px 6px');
   </script>
+  <!-- New menu -->
+  <div id="new-menu">
+    <button onclick="ERV.closeNew();ERV.close()"><span class="nm-ic"><svg width="15" height="15" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1.5" y="1.5" width="11" height="11" rx="1" /><line x1="1.5" y1="4.5" x2="12.5" y2="4.5" /><line x1="4.5" y1="1.5" x2="4.5" y2="12.5" /></svg></span><span>Design canvas<small>Screens and frames, as now</small></span></button>
+    <button onclick="ERV.closeNew();ERV.open()"><span class="nm-ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="8" height="6" rx="1.5"/><rect x="13" y="14" width="8" height="6" rx="1.5"/><path d="M7 10v4a2 2 0 0 0 2 2h4"/></svg></span><span>ER diagram<small>Database tables and relations</small></span></button>
+  </div>
+
+  <!-- ER diagram screen -->
+  <div id="er-app" data-theme="light">
+    <div id="er-top">
+      <button class="er-btn" onclick="ERV.close()" title="Back to the design canvas">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>Ligma
+      </button>
+      <input id="er-title" spellcheck="false" aria-label="Diagram name">
+      <select id="er-picker" title="Switch diagram"></select>
+      <button class="er-btn ic er-wr" onclick="ERV.newDiagram()" title="New diagram"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="er-btn ic er-wr" onclick="ERV.deleteDiagram()" title="Delete this diagram"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
+      <span class="ro-tag">View only</span>
+      <div class="er-sp"></div>
+      <div class="er-seg er-wr" id="er-notation" title="Relationship notation"><button data-n="crows-foot">Crow's foot</button><button data-n="chen">Chen</button></div>
+      <button class="er-btn er-wr" onclick="ERV.autoLayout()" title="Re-arrange every table">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M10 6.5h4a3 3 0 0 1 3 3V14"/></svg>Auto layout
+      </button>
+      <button class="er-btn ic" id="er-theme" onclick="ERV.toggleTheme()" title="Light or dark"></button>
+      <button class="er-btn er-wr" onclick="ERV.openImport()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg>Import
+      </button>
+      <button class="er-btn p" onclick="ERV.openExport()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></svg>Export
+      </button>
+    </div>
+    <div id="er-body">
+      <div id="er-left">
+        <div id="er-lhead"><span>Code</span><span style="font-weight:500;text-transform:none;letter-spacing:0">Eraser syntax · SQL and DBML via Import</span></div>
+        <div id="er-editor">
+          <div id="er-gutter"></div>
+          <div id="er-code-wrap"><pre id="er-hl" aria-hidden="true"></pre><textarea id="er-code" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Diagram code"></textarea></div>
+        </div>
+        <div id="er-errs"></div>
+      </div>
+      <div id="er-resizer"></div>
+      <div id="er-canvas">
+        <svg id="er-svg" xmlns="http://www.w3.org/2000/svg"><defs><filter id="er-shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0f172a" flood-opacity=".13"/></filter></defs><g id="er-world"><g id="er-edges"></g><g id="er-nodes"></g></g></svg>
+        <div id="er-empty"><div><b style="font-size:15px;color:var(--e-text)">Nothing to draw yet</b><br>Write tables in the code panel, or press Import<br>to bring in SQL, DBML or Eraser code.</div></div>
+        <div id="er-stats"></div>
+        <div id="er-zoom"><button onclick="ERV.zoomBy(1/1.2)" title="Zoom out">−</button><span id="er-zv">100%</span><button onclick="ERV.zoomBy(1.2)" title="Zoom in">+</button><button onclick="ERV.fit()" title="Fit to screen">Fit</button></div>
+      </div>
+    </div>
+
+    <div class="er-modal" id="er-imp">
+      <div class="er-card">
+        <h2>Import database</h2>
+        <div class="sub">Paste code or drop a file. SQL (<code>CREATE TABLE</code>, <code>ALTER TABLE … FOREIGN KEY</code>), DBML and Eraser code are recognised automatically.</div>
+        <div class="bd">
+          <div id="er-imp-drop">Drop a <b>.sql</b>, <b>.dbml</b> or <b>.txt</b> file here, or <a href="#" id="er-imp-pick" style="color:var(--e-accent)">choose a file</a><input type="file" id="er-imp-file" accept=".sql,.dbml,.txt,.erd,.eraser,.md" style="display:none"></div>
+          <textarea id="er-imp-ta" spellcheck="false" placeholder="CREATE TABLE users (&#10;  id uuid PRIMARY KEY,&#10;  email text UNIQUE NOT NULL&#10;);&#10;&#10;CREATE TABLE orders (&#10;  id uuid PRIMARY KEY,&#10;  user_id uuid REFERENCES users(id)&#10;);"></textarea>
+          <div class="er-row"><span>Format</span><select id="er-imp-fmt"><option value="auto">Detect automatically</option><option value="sql">SQL</option><option value="dbml">DBML</option><option value="eraser">Eraser code</option></select>
+            <span style="margin-left:8px">Then</span><select id="er-imp-mode"><option value="replace">Replace this diagram</option><option value="append">Add to this diagram</option><option value="new">Open as a new diagram</option></select></div>
+          <div id="er-imp-msg" style="min-height:20px;margin-top:8px;font-size:12px;color:#d4380d"></div>
+        </div>
+        <div class="ft"><button class="er-btn" onclick="ERV.sample()">Load a sample</button><div class="er-sp"></div><button class="er-btn" onclick="ERV.closeModals()">Cancel</button><button class="er-btn p" onclick="ERV.doImport()">Visualize</button></div>
+      </div>
+    </div>
+    <div class="er-modal" id="er-exp">
+      <div class="er-card" style="width:520px">
+        <h2>Export</h2><div class="sub">Download the diagram or its code.</div>
+        <div class="er-exp">
+          <button onclick="ERV.exportAs('svg')"><b>SVG image</b><span>Sharp at any size</span></button>
+          <button onclick="ERV.exportAs('png')"><b>PNG image</b><span>2× resolution</span></button>
+          <button onclick="ERV.exportAs('code')"><b>Eraser code</b><span>.erd text file</span></button>
+          <button onclick="ERV.exportAs('sql')"><b>SQL</b><span>CREATE TABLE statements</span></button>
+          <button onclick="ERV.exportAs('copy')"><b>Copy code</b><span>To the clipboard</span></button>
+          <button onclick="ERV.closeModals()"><b>Close</b><span>&nbsp;</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script id="er-js">
+/* ═════════ ER DIAGRAMS (Eraser-style) ═════════ */
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+  const KEY = 'ligma_er_v1';
+
+  /* ---------- palette ---------- */
+  const COLORS = {
+    blue:   { b: '#3b82f6', p: '#dbeafe', d: '#1e3a8a' },
+    green:  { b: '#22a06b', p: '#d6f5e5', d: '#14532d' },
+    red:    { b: '#ef4444', p: '#fee2e2', d: '#7f1d1d' },
+    orange: { b: '#f97316', p: '#ffe8d2', d: '#7c2d12' },
+    purple: { b: '#8b5cf6', p: '#ece4ff', d: '#4c1d95' },
+    yellow: { b: '#eab308', p: '#fdf3c4', d: '#713f12' },
+    teal:   { b: '#14b8a6', p: '#d0f4ef', d: '#134e4a' },
+    pink:   { b: '#ec4899', p: '#fde0ef', d: '#831843' },
+    gray:   { b: '#64748b', p: '#e8ebf0', d: '#1e293b' },
+    black:  { b: '#1f2937', p: '#e5e7eb', d: '#111827' },
+    lightblue: { b: '#0ea5e9', p: '#d9f1fd', d: '#0c4a6e' }
+  };
+  COLORS.cyan = COLORS.lightblue; COLORS.grey = COLORS.gray; COLORS.violet = COLORS.purple; COLORS.indigo = COLORS.purple; COLORS.lime = COLORS.green; COLORS.brown = COLORS.orange;
+  const AUTO = ['blue', 'green', 'orange', 'purple', 'teal', 'pink', 'yellow', 'red', 'lightblue'];
+  function colorOf(name) {
+    if (!name) return null;
+    const n = String(name).toLowerCase().replace(/\s+/g, '');
+    if (COLORS[n]) return COLORS[n];
+    if (/^#[0-9a-f]{3,8}$/i.test(n)) return { b: n, p: n + '28', d: n };
+    return null;
+  }
+
+  /* ---------- icons (small 14px glyphs) ---------- */
+  const ICONS = {
+    key: 'M15.5 7.5a4 4 0 1 1-3.1 6.5L8 18.4V21H5.5v-2H4v-2l5.1-5.1A4 4 0 0 1 15.5 7.5zm1.5 2a1.5 1.5 0 1 0 0 .01z',
+    link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
+    user: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
+    table: 'M3 5h18v14H3zM3 10h18M9 5v14',
+    box: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM12 12l8-4.5M12 12v9M12 12L4 7.5',
+    tag: 'M3 12V4h8l10 10-8 8zM7.5 8.5h.01',
+    file: 'M6 3h8l4 4v14H6zM14 3v4h4',
+    cart: 'M3 4h2l2 11h10l2-8H6M9 20h.01M16 20h.01',
+    bell: 'M6 16V11a6 6 0 0 1 12 0v5l2 2H4zM10 21h4',
+    star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+    map: 'M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+    phone: 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z',
+    mail: 'M3 6h18v12H3zM3 7l9 7 9-7',
+    clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+    lock: 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3',
+    shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+    chat: 'M4 5h16v11H9l-5 4z',
+    settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-2-4-2 1-2-1-.5-2h-4L10 7 8 8 6 7 4 11l2 1v2l-2 1 2 4 2-1 2 1 .5 2h4l.5-2 2-1 2 1 2-4-2-1z',
+    database: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3',
+    credit: 'M3 6h18v12H3zM3 10h18',
+    shopping: 'M5 8h14l-1 12H6zM9 8a3 3 0 0 1 6 0',
+    home: 'M4 11l8-7 8 7v9h-5v-6H9v6H4z',
+    users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2 20a7 7 0 0 1 14 0M17 5a3.5 3.5 0 0 1 0 6.5M18 14a7 7 0 0 1 4 6'
+  };
+  ICONS.person = ICONS.user; ICONS.profile = ICONS.user; ICONS.group = ICONS.users; ICONS.account = ICONS.user; ICONS.order = ICONS.shopping; ICONS.product = ICONS.box; ICONS.package = ICONS.box; ICONS.payment = ICONS.credit; ICONS.message = ICONS.chat; ICONS.email = ICONS.mail; ICONS.location = ICONS.map; ICONS.pin = ICONS.map; ICONS.time = ICONS.clock; ICONS.notification = ICONS.bell; ICONS.security = ICONS.shield; ICONS.db = ICONS.database; ICONS.document = ICONS.file;
+  function iconPath(n) { n = String(n || '').toLowerCase().replace(/^.*[-_:]/, ''); return ICONS[n] || null; }
+
+  /* ---------- util ---------- */
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const uid = () => 'er' + Math.random().toString(36).slice(2, 9);
+  const needsQuote = s => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(s);
+  const q = s => needsQuote(s) ? '"' + String(s).replace(/"/g, '') + '"' : s;
+  const unq = s => { s = String(s).trim(); return /^".*"$/.test(s) ? s.slice(1, -1) : s; };
+  const KEYWORDS = /^(title|colormode|stylemode|typeface|notation|textsize|direction)\s+/i;
+
+  /* ═════════ PARSER (Eraser ERD syntax) ═════════ */
+  function parseEraser(code) {
+    const m = { title: '', colorMode: 'pastel', styleMode: 'shadow', typeface: 'clean', notation: null, textSize: 'medium',
+      entities: new Map(), order: [], rels: [], errors: [] };
+    const lines = code.split('\n');
+    let cur = null;
+    const ent = (name, line) => {
+      let e = m.entities.get(name);
+      if (!e) { e = { name, attrs: [], color: null, icon: null, line: line == null ? -1 : line, auto: line == null, props: {} }; m.entities.set(name, e); m.order.push(name); }
+      return e;
+    };
+    const parseProps = s => {
+      const out = {};
+      if (!s) return out;
+      s.replace(/^\[|\]$/g, '').split(',').forEach(p => {
+        const i = p.indexOf(':'); if (i < 0) return;
+        out[p.slice(0, i).trim().toLowerCase()] = p.slice(i + 1).trim();
+      });
+      return out;
+    };
+    const stripC = s => { let inS = false; for (let i = 0; i < s.length; i++) { if (s[i] === '"') inS = !inS; if (!inS && s[i] === '/' && s[i + 1] === '/') return s.slice(0, i); } return s; };
+    const ID = '("[^"]+"|[A-Za-z_][\\w ]*?|[A-Za-z_]\\w*)';
+    const REF = new RegExp('^("[^"]+"|[A-Za-z_]\\w*)(?:\\.("[^"]+"|[A-Za-z_]\\w*))?\\s*(<>|<|>|-)\\s*("[^"]+"|[A-Za-z_]\\w*)(?:\\.("[^"]+"|[A-Za-z_]\\w*))?\\s*(?::\\s*(.*))?$');
+    const HEAD = /^("[^"]+"|[^\s\[{]+)\s*(\[[^\]]*\])?\s*\{\s*(.*)$/;
+
+    for (let i = 0; i < lines.length; i++) {
+      let raw = stripC(lines[i]).trim();
+      if (!raw) continue;
+      if (cur) {
+        if (raw === '}' || raw.startsWith('}')) { cur = null; continue; }
+        // attribute: name type meta...  (name may be quoted)
+        let mm = raw.match(/^("[^"]+"|[^\s]+)\s*(.*)$/);
+        if (!mm) continue;
+        let name = unq(mm[1]); let rest = mm[2] || '';
+        let props = {};
+        const pm = rest.match(/\[[^\]]*\]\s*$/);
+        if (pm) { props = parseProps(pm[0]); rest = rest.slice(0, pm.index).trim(); }
+        let type = ''; let meta = '';
+        if (rest.startsWith(':')) rest = rest.slice(1).trim();
+        const tm = rest.match(/^([A-Za-z_][\w]*(?:\s*\([^)]*\))?(?:\[\])?)\s*(.*)$/);
+        if (tm && !/^(pk|fk|unique|uniq|required|primary|foreign|not|null|default)$/i.test(tm[1])) { type = tm[1].replace(/\s+/g, ''); meta = tm[2]; } else { meta = rest; }
+        const ml = ' ' + meta.toLowerCase() + ' ';
+        const pk = /\b(pk|primary\s*key)\b/.test(ml);
+        const fk = /\b(fk|foreign\s*key)\b/.test(ml);
+        const attr = { name, type, pk, fk, unique: /\b(unique|uniq)\b/.test(ml), notnull: /\bnot\s*null\b|\brequired\b/.test(ml), meta: meta.trim(), props };
+        cur.attrs.push(attr);
+        // inline relationships  "attr string > other.col"
+        const rm = meta.match(/(<>|<|>|-)\s*("[^"]+"|[A-Za-z_]\w*)\.("[^"]+"|[A-Za-z_]\w*)/);
+        if (rm) m.rels.push({ a: { e: cur.name, c: name }, op: rm[1], b: { e: unq(rm[2]), c: unq(rm[3]) }, label: '', line: i });
+        continue;
+      }
+      let km = raw.match(KEYWORDS);
+      if (km && !raw.includes('{')) {
+        const k = km[1].toLowerCase(); const v = raw.slice(km[0].length).trim();
+        if (k === 'title') m.title = unq(v);
+        else if (k === 'colormode') m.colorMode = v.toLowerCase();
+        else if (k === 'stylemode') m.styleMode = v.toLowerCase();
+        else if (k === 'typeface') m.typeface = v.toLowerCase();
+        else if (k === 'notation') m.notation = v.toLowerCase().replace(/[\s']/g, '').replace('crowsfoot', 'crows-foot');
+        else if (k === 'textsize') m.textSize = v.toLowerCase();
+        continue;
+      }
+      let hm = raw.match(HEAD);
+      if (hm) {
+        const e = ent(unq(hm[1]), i);
+        e.auto = false; e.line = i;
+        const p = parseProps(hm[2]); e.props = p;
+        if (p.color) e.color = p.color; if (p.icon) e.icon = p.icon;
+        if (hm[3] && hm[3].startsWith('}')) { cur = null; } else cur = e;
+        if (hm[3] && !hm[3].startsWith('}') && hm[3].trim()) {
+          // "entity { id int" inline first attribute — rare; ignore
+        }
+        continue;
+      }
+      let rm = raw.match(REF);
+      if (rm) {
+        const a = { e: unq(rm[1]), c: rm[2] ? unq(rm[2]) : null };
+        const b = { e: unq(rm[4]), c: rm[5] ? unq(rm[5]) : null };
+        m.rels.push({ a, op: rm[3], b, label: (rm[6] || '').trim(), line: i });
+        continue;
+      }
+      // bare entity name
+      if (/^("[^"]+"|[A-Za-z_]\w*)\s*(\[[^\]]*\])?$/.test(raw)) {
+        const mm = raw.match(/^("[^"]+"|[A-Za-z_]\w*)\s*(\[[^\]]*\])?$/);
+        const e = ent(unq(mm[1]), i); e.auto = false; const p = parseProps(mm[2]); if (p.color) e.color = p.color; if (p.icon) e.icon = p.icon; continue;
+      }
+      m.errors.push({ line: i, msg: 'Could not understand: ' + raw.slice(0, 60) });
+    }
+    if (cur) m.errors.push({ line: cur.line, msg: 'Entity "' + cur.name + '" is missing a closing }' });
+    // resolve relationships; auto-create entities
+    const keep = [];
+    m.rels.forEach(r => {
+      [r.a, r.b].forEach(s => { if (!m.entities.has(s.e)) ent(s.e, null); });
+      const ea = m.entities.get(r.a.e), eb = m.entities.get(r.b.e);
+      if (r.a.c && !ea.attrs.some(x => x.name === r.a.c)) { m.errors.push({ line: r.line, msg: 'No attribute "' + r.a.c + '" on ' + r.a.e + ' (line still drawn)' }); }
+      if (r.b.c && !eb.attrs.some(x => x.name === r.b.c)) { m.errors.push({ line: r.line, msg: 'No attribute "' + r.b.c + '" on ' + r.b.e + ' (line still drawn)' }); }
+      keep.push(r);
+    });
+    m.rels = keep;
+    // mark fk columns visually
+    m.rels.forEach(r => {
+      const side = r.op === '>' ? r.a : r.op === '<' ? r.b : r.op === '-' ? r.a : null;
+      if (side && side.c) { const a = m.entities.get(side.e).attrs.find(x => x.name === side.c); if (a && !a.pk) a.fkv = true; }
+    });
+    return m;
+  }
+
+  /* ═════════ SQL → model code ═════════ */
+  function splitTop(s, sep) {
+    const out = []; let d = 0, cur = '', inS = null;
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (inS) { cur += c; if (c === inS) inS = null; continue; }
+      if (c === "'" || c === '"' || c === '`') { inS = c; cur += c; continue; }
+      if (c === '(') d++; if (c === ')') d--;
+      if (c === sep && d === 0) { out.push(cur); cur = ''; } else cur += c;
+    }
+    if (cur.trim()) out.push(cur);
+    return out;
+  }
+  const sqlId = s => { s = String(s).trim(); s = s.replace(/^[`"\[]|[`"\]]$/g, ''); return s; };
+  const sqlLast = s => sqlId(String(s).trim().split('.').pop());
+  function sqlCols(s) { return splitTop(s.replace(/^\(|\)$/g, ''), ',').map(sqlId); }
+
+  function sqlToModel(sql) {
+    sql = sql.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' ');
+    const tables = new Map(); const rels = [];
+    const re = /create\s+(?:or\s+replace\s+)?(?:temporary\s+|temp\s+|unlogged\s+)?table\s+(?:if\s+not\s+exists\s+)?((?:[`"\[]?[\w$]+[`"\]]?\.)*[`"\[]?[\w$ ]+[`"\]]?)\s*\(/gi;
+    let mm;
+    while ((mm = re.exec(sql))) {
+      const name = sqlLast(mm[1]);
+      let i = re.lastIndex, d = 1;
+      while (i < sql.length && d > 0) { if (sql[i] === '(') d++; else if (sql[i] === ')') d--; i++; }
+      const body = sql.slice(re.lastIndex, i - 1);
+      re.lastIndex = i;
+      const t = { name, attrs: [] }; tables.set(name, t);
+      splitTop(body, ',').forEach(part => {
+        part = part.trim(); if (!part) return;
+        let low = part.toLowerCase().replace(/^constraint\s+\S+\s+/i, '');
+        let pt = part.replace(/^constraint\s+\S+\s+/i, '');
+        let m1;
+        if ((m1 = pt.match(/^primary\s+key\s*\(([^)]*)\)/i))) { sqlCols(m1[1]).forEach(c => { const a = t.attrs.find(x => x.name === c); if (a) a.pk = true; }); return; }
+        if ((m1 = pt.match(/^foreign\s+key\s*\(([^)]*)\)\s*references\s+([\w."`\[\]$]+)\s*(?:\(([^)]*)\))?/i))) {
+          const cs = sqlCols(m1[1]), rc = m1[3] ? sqlCols(m1[3]) : [];
+          cs.forEach((c, k) => rels.push({ from: name, col: c, to: sqlLast(m1[2]), tcol: rc[k] || rc[0] || 'id' })); return;
+        }
+        if ((m1 = pt.match(/^unique\s*(?:key|index)?\s*(?:\S+\s*)?\(([^)]*)\)/i))) { const cs = sqlCols(m1[1]); if (cs.length === 1) { const a = t.attrs.find(x => x.name === cs[0]); if (a) a.unique = true; } return; }
+        if (/^(key|index|fulltext|spatial|check|exclude|period)\b/i.test(pt)) return;
+        // column
+        const cm = pt.match(/^([`"\[][^`"\]]+[`"\]]|[\w$]+)\s+(.*)$/s);
+        if (!cm) return;
+        const cname = sqlId(cm[1]); let rest = cm[2];
+        const tm = rest.match(/^((?:double\s+precision|character\s+varying|timestamp(?:\s+with(?:out)?\s+time\s+zone)?|time(?:\s+with(?:out)?\s+time\s+zone)?|[\w.]+)(?:\s*\([^)]*\))?(?:\s*\[\])?)\s*(.*)$/is);
+        if (!tm) return;
+        const type = tm[1].replace(/\s+/g, ' ').replace(/\s*\(\s*/g, '(').replace(/\s*,\s*/g, ',').replace(/\s*\)/g, ')').replace(/ /g, '_');
+        const flags = ' ' + tm[2].toLowerCase() + ' ';
+        const a = { name: cname, type, pk: /\bprimary\s+key\b/.test(flags), unique: /\bunique\b/.test(flags), notnull: /\bnot\s+null\b/.test(flags) };
+        t.attrs.push(a);
+        const rf = tm[2].match(/references\s+([\w."`\[\]$]+)\s*(?:\(([^)]*)\))?/i);
+        if (rf) rels.push({ from: name, col: cname, to: sqlLast(rf[1]), tcol: rf[2] ? sqlCols(rf[2])[0] : 'id' });
+      });
+    }
+    const alt = /alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?([\w."`\[\]$]+)\s+add\s+(?:constraint\s+\S+\s+)?foreign\s+key\s*\(([^)]*)\)\s*references\s+([\w."`\[\]$]+)\s*(?:\(([^)]*)\))?/gi;
+    while ((mm = alt.exec(sql))) {
+      const cs = sqlCols(mm[2]), rc = mm[4] ? sqlCols(mm[4]) : [];
+      cs.forEach((c, k) => rels.push({ from: sqlLast(mm[1]), col: c, to: sqlLast(mm[3]), tcol: rc[k] || rc[0] || 'id' }));
+    }
+    return modelToCode(tables, rels.map(r => {
+      const t = tables.get(r.from); const a = t && t.attrs.find(x => x.name === r.col);
+      return { a: { e: r.from, c: r.col }, op: a && (a.unique || a.pk) && t.attrs.filter(x => x.pk).length === 1 ? '-' : '>', b: { e: r.to, c: r.tcol } };
+    }));
+  }
+
+  /* ═════════ DBML → code ═════════ */
+  function dbmlToCode(src) {
+    src = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+    const tables = new Map(); const rels = []; const alias = {};
+    const re = /\bTable\s+((?:"[^"]+"|[\w.]+))(?:\s+as\s+(\w+))?(?:\s*\[[^\]]*\])?\s*\{/gi; let mm;
+    while ((mm = re.exec(src))) {
+      const name = sqlLast(unq(mm[1])); if (mm[2]) alias[mm[2]] = name;
+      let i = re.lastIndex, d = 1; while (i < src.length && d > 0) { if (src[i] === '{') d++; else if (src[i] === '}') d--; i++; }
+      const body = src.slice(re.lastIndex, i - 1); re.lastIndex = i;
+      const t = { name, attrs: [] }; tables.set(name, t);
+      // strip nested blocks (indexes / note)
+      let flat = '', dd = 0; for (const c of body) { if (c === '{') dd++; else if (c === '}') dd--; else if (dd === 0) flat += c; }
+      flat.split('\n').forEach(ln => {
+        ln = ln.trim(); if (!ln || /^(indexes|note)\b/i.test(ln)) return;
+        const cm = ln.match(/^("[^"]+"|[\w$]+)\s+([\w.()," ]+?)(?:\s*\[(.*)\])?\s*$/);
+        if (!cm) return;
+        const a = { name: unq(cm[1]), type: cm[2].trim().replace(/\s+/g, '_'), pk: false, unique: false, notnull: false };
+        const set = (cm[3] || '').toLowerCase();
+        a.pk = /\b(pk|primary key)\b/.test(set); a.unique = /\bunique\b/.test(set); a.notnull = /\bnot null\b/.test(set);
+        t.attrs.push(a);
+        const rf = (cm[3] || '').match(/ref\s*:\s*(<>|<|>|-)\s*("[^"]+"|[\w.]+)\.("[^"]+"|\w+)/i);
+        if (rf) rels.push({ a: { e: name, c: a.name }, op: rf[1], b: { e: sqlLast(unq(rf[2])), c: unq(rf[3]) } });
+      });
+    }
+    const rr = /\bRef(?:\s+\w+)?\s*[:{]\s*("[^"]+"|[\w.]+)\.("[^"]+"|\w+)\s*(<>|<|>|-)\s*("[^"]+"|[\w.]+)\.("[^"]+"|\w+)/gi;
+    while ((mm = rr.exec(src))) rels.push({ a: { e: sqlLast(unq(mm[1])), c: unq(mm[2]) }, op: mm[3], b: { e: sqlLast(unq(mm[4])), c: unq(mm[5]) } });
+    rels.forEach(r => { r.a.e = alias[r.a.e] || r.a.e; r.b.e = alias[r.b.e] || r.b.e; });
+    return modelToCode(tables, rels);
+  }
+
+  function modelToCode(tables, rels) {
+    let out = '';
+    tables.forEach(t => {
+      out += q(t.name) + ' {\n';
+      t.attrs.forEach(a => {
+        out += '  ' + q(a.name) + (a.type ? ' ' + a.type : '') + (a.pk ? ' pk' : '') + (a.unique && !a.pk ? ' unique' : '') + (a.notnull && !a.pk ? ' not null' : '') + '\n';
+      });
+      out += '}\n\n';
+    });
+    rels.forEach(r => { out += q(r.a.e) + '.' + q(r.a.c) + ' ' + r.op + ' ' + q(r.b.e) + '.' + q(r.b.c) + '\n'; });
+    return out.trim() + '\n';
+  }
+
+  function detectFormat(t) {
+    if (/create\s+table/i.test(t) || /alter\s+table[\s\S]*foreign\s+key/i.test(t)) return 'sql';
+    if (/^\s*Table\s+[\w."]+(\s+as\s+\w+)?\s*(\[[^\]]*\])?\s*\{/mi.test(t) || /^\s*Ref\b/mi.test(t)) return 'dbml';
+    return 'eraser';
+  }
+
+  /* model → SQL */
+  function modelToSql(m) {
+    let out = ''; const fks = [];
+    m.rels.forEach(r => {
+      let child, parent;
+      if (r.op === '>' || r.op === '-') { child = r.a; parent = r.b; } else if (r.op === '<') { child = r.b; parent = r.a; } else { out += '-- many-to-many between ' + r.a.e + ' and ' + r.b.e + ' needs a join table\n'; return; }
+      if (child.c && parent.c) fks.push({ child, parent });
+    });
+    if (out) out += '\n';
+    m.order.forEach(n => {
+      const e = m.entities.get(n);
+      out += 'CREATE TABLE ' + q(e.name) + ' (\n';
+      const lines = e.attrs.map(a => '  ' + q(a.name) + ' ' + (a.type || 'text').replace(/_/g, ' ') + (a.pk ? ' PRIMARY KEY' : '') + (a.unique && !a.pk ? ' UNIQUE' : '') + (a.notnull && !a.pk ? ' NOT NULL' : ''));
+      out += (lines.length ? lines.join(',\n') : '  id int PRIMARY KEY') + '\n);\n\n';
+    });
+    fks.forEach(f => { out += 'ALTER TABLE ' + q(f.child.e) + ' ADD FOREIGN KEY (' + q(f.child.c) + ') REFERENCES ' + q(f.parent.e) + ' (' + q(f.parent.c) + ');\n'; });
+    return out.trim() + '\n';
+  }
+
+  /* ═════════ STATE ═════════ */
+  const SAMPLE = `// Tip: write tables like this, or press Import to bring in SQL / DBML.
+title Blog
+
+users [icon: user, color: blue] {
+  id uuid pk
+  name string
+  email string unique
+  created_at timestamp
+}
+
+posts [icon: file, color: green] {
+  id uuid pk
+  author_id uuid
+  title string
+  body text
+  published_at timestamp
+}
+
+comments [icon: chat, color: orange] {
+  id uuid pk
+  post_id uuid
+  user_id uuid
+  body text
+}
+
+tags [icon: tag, color: purple] {
+  id uuid pk
+  label string unique
+}
+
+post_tags [color: gray] {
+  post_id uuid pk
+  tag_id uuid pk
+}
+
+users.id < posts.author_id
+posts.id < comments.post_id
+users.id < comments.user_id
+posts.id < post_tags.post_id
+tags.id < post_tags.tag_id
+`;
+  const BLANK = `title Untitled diagram
+
+// Describe your tables, e.g.
+// users {
+//   id uuid pk
+//   name string
+// }
+// users.id < posts.author_id
+`;
+
+  const st = {
+    current: null, model: null, layout: null, zoom: 1, px: 0, py: 0, sel: null, timer: null, saveT: null, fitNext: true, active: false, inited: false, remote: false
+  };
+  /* The diagrams live inside the Ligma project (S.er) so Save / Export / Import / Share / multiplayer all carry them.
+     Only view preferences (theme, panel width, last diagram) stay per-browser. */
+  const PK = 'ligma_er_prefs';
+  const prefs = { theme: 'light', split: 400, current: null };
+  function loadPrefs() { try { Object.assign(prefs, JSON.parse(localStorage.getItem(PK) || '{}')); } catch (e) { } }
+  function savePrefs() { try { localStorage.setItem(PK, JSON.stringify(prefs)); } catch (e) { } }
+  const ro = () => typeof isViewMode !== 'undefined' && !!isViewMode;
+  function store() { if (!S.er || !Array.isArray(S.er.diagrams)) S.er = { diagrams: [], del: {} }; if (!S.er.del) S.er.del = {}; return S.er; }
+  const diagrams = () => store().diagrams;
+  const EMPTY = { id: '', name: '', code: '', pos: {}, notation: 'crows-foot' };
+  const cur = () => diagrams().find(d => d.id === st.current) || EMPTY;
+  const mk = (code, name) => ({ id: uid(), name, code, pos: {}, notation: 'crows-foot', ts: Date.now() });
+  const touch = d => { d.ts = Date.now(); return d; };
+  function ensureCurrent() {
+    const ds = diagrams();
+    if (!ds.some(d => d.id === st.current)) st.current = (prefs.current && ds.some(d => d.id === prefs.current)) ? prefs.current : (ds[0] ? ds[0].id : null);
+  }
+  function load() {
+    loadPrefs(); const s = store();
+    if (!s.diagrams.length && !ro()) {
+      try { const d = JSON.parse(localStorage.getItem(KEY) || 'null'); if (d && d.diagrams) d.diagrams.forEach(x => { x.ts = x.ts || Date.now(); s.diagrams.push(x); }); } catch (e) { }
+      if (!s.diagrams.length) s.diagrams.push(mk(SAMPLE, 'Blog (sample)'));
+      persistNow();
+    }
+    ensureCurrent();
+  }
+  /* saving: debounced, silent write of the whole project */
+  function persistNow() { try { if (typeof saveProject === 'function') saveProject(true); } catch (e) { } }
+  function save() { clearTimeout(st.saveT); st.saveT = setTimeout(persistNow, 900); }
+  /* live sync to teammates */
+  const bc = m => { if (st.remote || ro()) return; try { if (typeof broadcast === 'function') broadcast(m); } catch (e) { } };
+  const _later = {}, _thr = {};
+  function bcLater(key, fn, ms) { clearTimeout(_later[key]); _later[key] = setTimeout(fn, ms); }
+  function bcThrottle(key, fn, ms) { const t = _thr[key]; if (t) { t.f = fn; return; } fn(); _thr[key] = { f: null, id: setTimeout(() => { const f = _thr[key].f; delete _thr[key]; if (f) f(); }, ms) }; }
+  const bcCode = d => bc({ type: 'er_code', id: d.id, code: d.code, ts: d.ts });
+  const bcPos = d => bc({ type: 'er_pos', id: d.id, pos: d.pos, ts: d.ts });
+  const bcMeta = d => bc({ type: 'er_meta', id: d.id, name: d.name, notation: d.notation, ts: d.ts });
+  const bcUpsert = d => bc({ type: 'er_upsert', d: JSON.parse(JSON.stringify(d)) });
+
+  /* ═════════ LAYOUT ═════════ */
+  const FONT = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif';
+  const FONTS = { clean: FONT, mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace', 'hand-drawn': '"Comic Sans MS", "Segoe Print", "Bradley Hand", cursive' };
+  const SIZES = { small: 12, medium: 13.5, large: 15.5 };
+  let _cv = null;
+  function tw(text, size, weight) {
+    if (!_cv) _cv = document.createElement('canvas').getContext('2d');
+    _cv.font = (weight || 400) + ' ' + size + 'px ' + (FONTS[st.model && st.model.typeface] || FONT);
+    return _cv.measureText(text).width;
+  }
+  function metrics(m) {
+    const fs = SIZES[m.textSize] || 13.5; const rowH = Math.round(fs * 2.1), headH = Math.round(fs * 3.0);
+    const sizes = new Map();
+    m.entities.forEach(e => {
+      let wn = 0, wt = 0;
+      e.attrs.forEach(a => { wn = Math.max(wn, tw(a.name, fs)); wt = Math.max(wt, tw(a.type || '', fs - 1.5)); });
+      const hw = tw(e.name, fs + 1, 700) + 44 + (iconPath(e.icon) ? 26 : 0);
+      const bw = 16 + 20 + wn + (wt ? 28 + wt : 0) + 16;
+      const w = Math.max(190, Math.ceil(Math.max(hw, bw)));
+      sizes.set(e.name, { w, h: headH + Math.max(1, e.attrs.length) * rowH + (e.attrs.length ? 6 : 0), fs, rowH, headH });
+    });
+    return sizes;
+  }
+  function autoLayout(m, sizes) {
+    const names = m.order.slice();
+    const adj = new Map(names.map(n => [n, new Set()])); const und = new Map(names.map(n => [n, new Set()]));
+    m.rels.forEach(r => {
+      if (r.a.e === r.b.e) return;
+      let p = r.a.e, c = r.b.e; if (r.op === '>' || r.op === '-') { p = r.b.e; c = r.a.e; } else { p = r.a.e; c = r.b.e; }
+      adj.get(p).add(c); und.get(p).add(c); und.get(c).add(p);
+    });
+    // components
+    const seen = new Set(); const comps = [];
+    names.forEach(n => { if (seen.has(n)) return; const comp = []; const st2 = [n]; seen.add(n); while (st2.length) { const x = st2.pop(); comp.push(x); und.get(x).forEach(y => { if (!seen.has(y)) { seen.add(y); st2.push(y); } }); } comps.push(comp); });
+    const GX = 120, GY = 44; const boxes = [];
+    comps.forEach(comp => {
+      const set = new Set(comp);
+      // layers via DFS longest path ignoring back edges
+      const layer = new Map(), state = new Map();
+      const order = comp.slice().sort((a, b) => und.get(b).size - und.get(a).size);
+      const indeg = new Map(comp.map(n => [n, 0])); comp.forEach(n => adj.get(n).forEach(c => { if (set.has(c)) indeg.set(c, indeg.get(c) + 1); }));
+      const roots = order.filter(n => indeg.get(n) === 0); const starts = roots.length ? roots : [order[0]];
+      const back = new Set();
+      function dfs(n) { state.set(n, 1); adj.get(n).forEach(c => { if (!set.has(c)) return; if (state.get(c) === 1) back.add(n + '>' + c); else if (!state.get(c)) dfs(c); }); state.set(n, 2); }
+      starts.forEach(s => { if (!state.get(s)) dfs(s); }); comp.forEach(n => { if (!state.get(n)) dfs(n); });
+      comp.forEach(n => layer.set(n, 0));
+      for (let it = 0; it < comp.length + 1; it++) { let ch = false; comp.forEach(n => adj.get(n).forEach(c => { if (!set.has(c) || back.has(n + '>' + c)) return; if (layer.get(c) < layer.get(n) + 1) { layer.set(c, layer.get(n) + 1); ch = true; } })); if (!ch) break; }
+      const L = []; comp.forEach(n => { const l = layer.get(n); (L[l] = L[l] || []).push(n); });
+      const layers = L.filter(Boolean);
+      // barycenter ordering
+      const idx = new Map(), lyOf = new Map(); layers.forEach((l, li) => l.forEach((n, i) => { idx.set(n, i); lyOf.set(n, li); }));
+      for (let sweep = 0; sweep < 6; sweep++) {
+        const seq = sweep % 2 ? layers.slice().reverse() : layers;
+        seq.forEach(l => {
+          const bc = new Map(); l.forEach(n => { const nb = [...und.get(n)].filter(x => set.has(x) && lyOf.get(x) !== lyOf.get(n)); bc.set(n, nb.length ? nb.reduce((s, x) => s + idx.get(x), 0) / nb.length : idx.get(n)); });
+          l.sort((a, b) => bc.get(a) - bc.get(b)); l.forEach((n, i) => idx.set(n, i));
+        });
+      }
+      // place
+      const pos = {}; let x = 0, maxH = 0, colHs = [];
+      layers.forEach(l => { const w = Math.max(...l.map(n => sizes.get(n).w)); const h = l.reduce((s, n) => s + sizes.get(n).h, 0) + (l.length - 1) * GY; colHs.push({ l, w, h }); maxH = Math.max(maxH, h); });
+      // very tall single columns → wrap into extra columns to stay readable
+      colHs.forEach(c => {
+        const y0 = (maxH - c.h) / 2; let y = y0; c.l.forEach(n => { pos[n] = { x, y }; y += sizes.get(n).h + GY; }); x += c.w + GX;
+      });
+      boxes.push({ pos, w: x - GX, h: maxH });
+    });
+    // pack components
+    const area = boxes.reduce((s, b) => s + (b.w + 80) * (b.h + 80), 0); const maxW = Math.max(1400, Math.sqrt(area) * 1.5);
+    boxes.sort((a, b) => b.h - a.h);
+    let cx = 0, cy = 0, rowH = 0; const out = {};
+    boxes.forEach(b => { if (cx > 0 && cx + b.w > maxW) { cx = 0; cy += rowH + 80; rowH = 0; } Object.keys(b.pos).forEach(n => out[n] = { x: Math.round(cx + b.pos[n].x), y: Math.round(cy + b.pos[n].y) }); cx += b.w + 80; rowH = Math.max(rowH, b.h); });
+    return out;
+  }
+
+  /* ═════════ RENDER ═════════ */
+  const world = () => $('er-world');
+  function theme() { return $('er-app').dataset.theme; }
+  function pal() {
+    const d = theme() === 'dark';
+    return { bg: d ? '#14161b' : '#ffffff', card: d ? '#1f232c' : '#ffffff', cardLine: d ? '#343a47' : '#dfe3ea', row: d ? '#2a2f3a' : '#eef0f4', text: d ? '#e8eaee' : '#1b1f27', text2: d ? '#8f98ab' : '#7b8394', edge: d ? '#8b93a5' : '#7a8396', accent: '#5b5bf0' };
+  }
+  function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+
+  function render(opts) {
+    opts = opts || {};
+    const d = cur(); if (!d) return;
+    const m = st.model = parseEraser(d.code);
+    if (m.notation !== 'chen' && m.notation !== 'crows-foot') m.notation = d.notation || 'crows-foot';
+    // header sync
+    document.querySelectorAll('#er-notation button').forEach(b => b.classList.toggle('on', b.dataset.n === m.notation));
+    const sizes = metrics(m); st.sizes = sizes;
+    // positions
+    const missing = m.order.filter(n => !d.pos[n]);
+    if (missing.length) {
+      const all = autoLayout(m, sizes);
+      if (missing.length === m.order.length || missing.length > m.order.length * 0.5) { m.order.forEach(n => d.pos[n] = all[n]); }
+      else {
+        let maxX = 0; m.order.forEach(n => { if (d.pos[n]) maxX = Math.max(maxX, d.pos[n].x + (sizes.get(n) ? sizes.get(n).w : 200)); });
+        let y = 0; missing.forEach(n => { d.pos[n] = { x: maxX + 100, y }; y += sizes.get(n).h + 44; });
+      }
+      if (!ro()) { if (!st.remote) { touch(d); bcLater('pos' + d.id, () => bcPos(d), 120); } save(); }
+    }
+    // colours
+    const anyColor = m.order.some(n => m.entities.get(n).color);
+    m.order.forEach((n, i) => { const e = m.entities.get(n); e.c = colorOf(e.color) || (anyColor ? COLORS.gray : COLORS[AUTO[i % AUTO.length]]); });
+    drawAll();
+    // errors
+    const eb = $('er-errs'); eb.innerHTML = '';
+    eb.style.display = m.errors.length ? '' : 'none';
+    m.errors.slice(0, 20).forEach(er => { const dv = document.createElement('div'); dv.textContent = 'Line ' + (er.line + 1) + ' — ' + er.msg; dv.onclick = () => gotoLine(er.line); eb.appendChild(dv); });
+    $('er-empty').style.display = m.order.length ? 'none' : 'flex';
+    $('er-stats').textContent = m.order.length + ' table' + (m.order.length === 1 ? '' : 's') + ' · ' + m.rels.length + ' relation' + (m.rels.length === 1 ? '' : 's');
+    if (st.fitNext && m.order.length) { st.fitNext = false; fit(); }
+    applyView();
+  }
+
+  function entityBox(n) { const p = cur().pos[n]; const s = st.sizes.get(n); return { x: p.x, y: p.y, w: s.w, h: s.h }; }
+  function anchorY(n, col) {
+    const e = st.model.entities.get(n), s = st.sizes.get(n), b = entityBox(n);
+    if (!col) return b.y + s.headH / 2;
+    const i = e.attrs.findIndex(a => a.name === col);
+    if (i < 0) return b.y + s.headH / 2;
+    return b.y + s.headH + i * s.rowH + s.rowH / 2;
+  }
+  function cardinality(r) { // returns [kindA, kindB]; 'one' | 'many'
+    return r.op === '<' ? ['one', 'many'] : r.op === '>' ? ['many', 'one'] : r.op === '-' ? ['one', 'one'] : ['many', 'many'];
+  }
+
+  function roundedPath(pts, r) {
+    let d = 'M' + pts[0][0] + ' ' + pts[0][1];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1], p1 = pts[i], p2 = pts[i + 1];
+      const l1 = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), l2 = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+      const rr = Math.min(r, l1 / 2, l2 / 2);
+      if (rr < 0.5) { d += ' L' + p1[0] + ' ' + p1[1]; continue; }
+      const a = [p1[0] + (p0[0] - p1[0]) * rr / l1, p1[1] + (p0[1] - p1[1]) * rr / l1];
+      const b = [p1[0] + (p2[0] - p1[0]) * rr / l2, p1[1] + (p2[1] - p1[1]) * rr / l2];
+      d += ' L' + a[0] + ' ' + a[1] + ' Q' + p1[0] + ' ' + p1[1] + ' ' + b[0] + ' ' + b[1];
+    }
+    const l = pts[pts.length - 1]; d += ' L' + l[0] + ' ' + l[1];
+    return d;
+  }
+
+  function route(r, k) {
+    const jit = ((k || 0) % 5 - 2) * 9;
+    const A = entityBox(r.a.e), B = entityBox(r.b.e);
+    const ya = anchorY(r.a.e, r.a.c), yb = anchorY(r.b.e, r.b.c);
+    const STUB = 26;
+    if (r.a.e === r.b.e) { // self reference
+      const x = A.x + A.w; return { pts: [[x, ya], [x + STUB + 10, ya], [x + STUB + 10, yb === ya ? ya + 18 : yb], [x, yb === ya ? ya + 18 : yb]], sa: 1, sb: 1, ya, yb: yb === ya ? ya + 18 : yb };
+    }
+    let xa, xb, sa, sb, pts;
+    if (A.x + A.w + STUB * 2 <= B.x) { xa = A.x + A.w; xb = B.x; sa = 1; sb = -1; const mx = (xa + xb) / 2 + jit; pts = [[xa, ya], [mx, ya], [mx, yb], [xb, yb]]; }
+    else if (B.x + B.w + STUB * 2 <= A.x) { xa = A.x; xb = B.x + B.w; sa = -1; sb = 1; const mx = (xa + xb) / 2 + jit; pts = [[xa, ya], [mx, ya], [mx, yb], [xb, yb]]; }
+    else { // overlapping columns → both leave on the nearer shared side
+      const right = (A.x + A.w / 2 + B.x + B.w / 2) / 2 >= Math.min(A.x, B.x) + Math.max(A.w, B.w) / 2;
+      if (right) { xa = A.x + A.w; xb = B.x + B.w; sa = sb = 1; const ox = Math.max(xa, xb) + STUB + 14; pts = [[xa, ya], [ox, ya], [ox, yb], [xb, yb]]; }
+      else { xa = A.x; xb = B.x; sa = sb = -1; const ox = Math.min(xa, xb) - STUB - 14; pts = [[xa, ya], [ox, ya], [ox, yb], [xb, yb]]; }
+    }
+    return { pts, sa, sb, ya, yb };
+  }
+
+  function endMark(x, y, s, kind, col) {
+    // s = +1: line runs to the right of the entity edge, -1: to the left
+    const g = document.createElementNS(NS, 'g');
+    const path = (d) => el('path', { d, fill: 'none', stroke: col, 'stroke-width': 1.6, 'stroke-linecap': 'round' }, g);
+    if (kind === 'many') { path('M' + (x + s * 13) + ' ' + y + ' L' + x + ' ' + (y - 7) + ' M' + (x + s * 13) + ' ' + y + ' L' + x + ' ' + (y + 7) + ' M' + (x + s * 13) + ' ' + y + ' L' + x + ' ' + y); path('M' + (x + s * 17) + ' ' + (y - 6) + ' L' + (x + s * 17) + ' ' + (y + 6)); }
+    else { path('M' + (x + s * 11) + ' ' + (y - 6) + ' L' + (x + s * 11) + ' ' + (y + 6)); path('M' + (x + s * 16) + ' ' + (y - 6) + ' L' + (x + s * 16) + ' ' + (y + 6)); }
+    return g;
+  }
+
+  function drawEdges() {
+    const m = st.model, P = pal(); const g = $('er-edges'); g.innerHTML = '';
+    const chen = m.notation === 'chen'; st.edgeEls = [];
+    m.rels.forEach((r, i) => {
+      if (!st.sizes.has(r.a.e) || !st.sizes.has(r.b.e)) return;
+      const rt = route(r, i); const [ka, kb] = cardinality(r);
+      const grp = el('g', { class: 'er-edge' }, g); grp.dataset.a = r.a.e; grp.dataset.b = r.b.e;
+      const colr = P.edge;
+      el('path', { d: roundedPath(rt.pts, 12), fill: 'none', stroke: colr, 'stroke-width': 1.5, 'stroke-linejoin': 'round' }, grp);
+      const first = rt.pts[0], last = rt.pts[rt.pts.length - 1];
+      if (!chen) { grp.appendChild(endMark(first[0], first[1], rt.sa, ka, colr)); grp.appendChild(endMark(last[0], last[1], rt.sb, kb, colr)); }
+      // mid point along polyline
+      let tot = 0; const segs = []; for (let k = 1; k < rt.pts.length; k++) { const l = Math.hypot(rt.pts[k][0] - rt.pts[k - 1][0], rt.pts[k][1] - rt.pts[k - 1][1]); segs.push(l); tot += l; }
+      let acc = tot / 2, mp = rt.pts[0]; for (let k = 0; k < segs.length; k++) { if (acc <= segs[k]) { const t = segs[k] ? acc / segs[k] : 0; mp = [rt.pts[k][0] + (rt.pts[k + 1][0] - rt.pts[k][0]) * t, rt.pts[k][1] + (rt.pts[k + 1][1] - rt.pts[k][1]) * t]; break; } acc -= segs[k]; }
+      const fs = 11.5;
+      if (chen) {
+        const lab = r.label || 'has'; const w = Math.max(54, tw(lab, fs) + 30), h = 34;
+        el('polygon', { points: [mp[0] - w / 2, mp[1], mp[0], mp[1] - h / 2, mp[0] + w / 2, mp[1], mp[0], mp[1] + h / 2].join(' '), fill: P.card, stroke: colr, 'stroke-width': 1.5 }, grp);
+        const t = el('text', { x: mp[0], y: mp[1] + 4, 'text-anchor': 'middle', 'font-size': fs, fill: P.text, 'font-family': FONTS[m.typeface] || FONT }, grp); t.textContent = lab;
+        [[first, rt.sa, ka], [last, rt.sb, kb]].forEach(([pt, s, k]) => { const tt = el('text', { x: pt[0] + s * 12, y: pt[1] - 6, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: colr, 'font-family': FONTS[m.typeface] || FONT }, grp); tt.textContent = k === 'one' ? '1' : 'N'; });
+      } else if (r.label) {
+        const w = tw(r.label, fs) + 14; el('rect', { x: mp[0] - w / 2, y: mp[1] - 10, width: w, height: 20, rx: 6, fill: P.bg, stroke: P.cardLine }, grp);
+        const t = el('text', { x: mp[0], y: mp[1] + 4, 'text-anchor': 'middle', 'font-size': fs, fill: P.text2, 'font-family': FONTS[m.typeface] || FONT }, grp); t.textContent = r.label;
+      }
+      st.edgeEls.push(grp);
+    });
+  }
+
+  function drawNodes() {
+    const m = st.model, P = pal(), dark = theme() === 'dark'; const g = $('er-nodes'); g.innerHTML = '';
+    const ff = FONTS[m.typeface] || FONT; const mode = m.colorMode;
+    m.order.forEach(n => {
+      const e = m.entities.get(n), s = st.sizes.get(n), b = entityBox(n), C = e.c;
+      const grp = el('g', { class: 'er-ent', transform: 'translate(' + b.x + ' ' + b.y + ')' }, g); grp.dataset.n = n;
+      const headFill = mode === 'bold' ? C.b : mode === 'outline' ? 'none' : (dark ? C.b + '33' : C.p);
+      const headText = mode === 'bold' ? '#ffffff' : (dark ? '#eef1f6' : (mode === 'outline' ? P.text : C.d));
+      const stroke = mode === 'outline' ? C.b : (mode === 'bold' ? C.b : (dark ? C.b + '88' : C.b + '55'));
+      const shadow = m.styleMode === 'shadow' && mode !== 'outline';
+      // card
+      const ra = { width: s.w, height: s.h, rx: 10, fill: mode === 'outline' ? 'none' : P.card, stroke, 'stroke-width': mode === 'outline' ? 1.8 : 1.2 }; if (shadow) ra.filter = 'url(#er-shadow)'; el('rect', ra, grp);
+      // header (top-rounded)
+      const hp = 'M0 ' + s.headH + ' V10 Q0 0 10 0 H' + (s.w - 10) + ' Q' + s.w + ' 0 ' + s.w + ' 10 V' + s.headH + ' Z';
+      el('path', { d: hp, fill: headFill, stroke: mode === 'outline' ? 'none' : 'none' }, grp);
+      el('line', { x1: 0, x2: s.w, y1: s.headH, y2: s.headH, stroke: mode === 'outline' ? C.b : stroke, 'stroke-width': 1 }, grp);
+      let tx = 16; const ip = iconPath(e.icon);
+      if (ip) { el('path', { d: ip, transform: 'translate(14 ' + (s.headH / 2 - 8) + ') scale(.68)', fill: 'none', stroke: mode === 'bold' ? '#fff' : (mode === 'outline' ? C.b : (dark ? '#fff' : C.d)), 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, grp); tx = 38; }
+      const t = el('text', { x: tx, y: s.headH / 2 + (s.fs + 1) * 0.35, 'font-size': s.fs + 1, 'font-weight': 700, fill: headText, 'font-family': ff }, grp); t.textContent = e.name;
+      // rows
+      e.attrs.forEach((a, i) => {
+        const y = s.headH + 3 + i * s.rowH;
+        if (i > 0) el('line', { x1: 14, x2: s.w - 14, y1: y, y2: y, stroke: P.row, 'stroke-width': 1 }, grp);
+        const cy = y + s.rowH / 2;
+        if (a.pk) el('path', { d: ICONS.key, transform: 'translate(13 ' + (cy - 6.5) + ') scale(.54)', fill: 'none', stroke: '#d9a300', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, grp);
+        else if (a.fk || a.fkv) el('path', { d: ICONS.link, transform: 'translate(13 ' + (cy - 6.5) + ') scale(.54)', fill: 'none', stroke: C.b, 'stroke-width': 2.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, grp);
+        else el('circle', { cx: 19, cy, r: 1.9, fill: P.text2, opacity: .45 }, grp);
+        const nt = el('text', { x: 36, y: cy + s.fs * 0.35, 'font-size': s.fs, fill: P.text, 'font-weight': a.pk ? 600 : 400, 'font-family': ff }, grp); nt.textContent = a.name;
+        if (a.type) { const tt = el('text', { x: s.w - 14, y: cy + s.fs * 0.35, 'text-anchor': 'end', 'font-size': s.fs - 1.5, fill: P.text2, 'font-family': ff }, grp); tt.textContent = a.type; }
+        if (a.notnull || a.unique) { /* subtle marker */ }
+      });
+      if (!e.attrs.length) { const tt = el('text', { x: 16, y: s.headH + s.rowH / 2 + 4, 'font-size': s.fs - 1, fill: P.text2, 'font-style': 'italic', 'font-family': ff }, grp); tt.textContent = 'no attributes'; }
+      if (st.sel === n) el('rect', { x: -4, y: -4, width: s.w + 8, height: s.h + 8, rx: 13, fill: 'none', stroke: P.accent, 'stroke-width': 2, 'stroke-dasharray': '' }, grp);
+    });
+  }
+
+  function drawAll() { drawEdges(); drawNodes(); applySel(); }
+  function applySel() {
+    const sel = st.sel;
+    document.querySelectorAll('#er-edges .er-edge').forEach(g => {
+      const on = sel && (g.dataset.a === sel || g.dataset.b === sel);
+      g.style.opacity = sel && !on ? .18 : 1;
+      if (on) g.querySelectorAll('path,polygon').forEach(p => { if (p.getAttribute('fill') === 'none' || p.tagName === 'path') p.setAttribute('stroke', '#5b5bf0'); });
+    });
+    document.querySelectorAll('#er-nodes .er-ent').forEach(g => {
+      if (!sel) { g.style.opacity = 1; return; }
+      const rel = g.dataset.n === sel || st.model.rels.some(r => (r.a.e === sel && r.b.e === g.dataset.n) || (r.b.e === sel && r.a.e === g.dataset.n));
+      g.style.opacity = rel ? 1 : .35;
+    });
+  }
+
+  /* ═════════ VIEW (pan / zoom / drag) ═════════ */
+  function applyView() { world().setAttribute('transform', 'translate(' + st.px + ' ' + st.py + ') scale(' + st.zoom + ')'); const c = $('er-canvas'); c.style.backgroundSize = (24 * st.zoom) + 'px ' + (24 * st.zoom) + 'px'; c.style.backgroundPosition = st.px + 'px ' + st.py + 'px'; $('er-zv').textContent = Math.round(st.zoom * 100) + '%'; }
+  function bounds() {
+    const m = st.model; if (!m || !m.order.length) return null;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    m.order.forEach(n => { const b = entityBox(n); x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h); });
+    return { x0: x0 - 50, y0: y0 - 50, x1: x1 + 50, y1: y1 + 50 };
+  }
+  function fit() {
+    const b = bounds(); const c = $('er-canvas'); const W = c.clientWidth, H = c.clientHeight; if (!b || !W) return;
+    const z = Math.min(1.25, Math.max(0.12, Math.min(W / (b.x1 - b.x0), (H - 20) / (b.y1 - b.y0))));
+    st.zoom = z; st.px = (W - (b.x1 - b.x0) * z) / 2 - b.x0 * z; st.py = (H - (b.y1 - b.y0) * z) / 2 - b.y0 * z; applyView();
+  }
+  function zoomAt(f, cx, cy) {
+    const nz = Math.min(3, Math.max(0.1, st.zoom * f)); const k = nz / st.zoom;
+    st.px = cx - (cx - st.px) * k; st.py = cy - (cy - st.py) * k; st.zoom = nz; applyView();
+  }
+  function wire() {
+    const c = $('er-canvas');
+    c.addEventListener('wheel', e => {
+      e.preventDefault(); const r = c.getBoundingClientRect();
+      const mouse = !e.ctrlKey && !e.metaKey && e.deltaX === 0 && Math.abs(e.deltaY) >= 40 && Number.isInteger(e.deltaY);
+      if (e.ctrlKey || e.metaKey || mouse) zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015)), e.clientX - r.left, e.clientY - r.top);
+      else { st.px -= e.deltaX; st.py -= e.deltaY; applyView(); }
+    }, { passive: false });
+    let mode = null, sx, sy, ox, oy, node, moved;
+    c.addEventListener('pointerdown', e => {
+      if (e.button === 2 || (e.target.closest && e.target.closest('#er-zoom, #er-stats'))) return;
+      const entG = e.target.closest && e.target.closest('.er-ent');
+      sx = e.clientX; sy = e.clientY; moved = false;
+      if (entG && e.button === 0) { mode = 'node'; node = entG.dataset.n; const p = cur().pos[node]; ox = p.x; oy = p.y; entG.classList.add('drag'); }
+      else { mode = 'pan'; ox = st.px; oy = st.py; }
+      c.setPointerCapture(e.pointerId);
+    });
+    c.addEventListener('pointermove', e => {
+      if (!mode) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true;
+      if (mode === 'pan') { st.px = ox + dx; st.py = oy + dy; applyView(); }
+      else if (moved && !ro()) {
+        const p = cur().pos[node]; p.x = Math.round(ox + dx / st.zoom); p.y = Math.round(oy + dy / st.zoom);
+        const g = document.querySelector('#er-nodes .er-ent[data-n="' + CSS.escape(node) + '"]'); if (g) g.setAttribute('transform', 'translate(' + p.x + ' ' + p.y + ')');
+        drawEdges(); applySel(); st.dragging = node; bcThrottle('drag', () => { const dd = cur(); bc({ type: 'er_pos', id: dd.id, pos: { [node]: dd.pos[node] }, ts: Date.now(), part: 1 }); }, 70);
+      }
+    });
+    const up = e => {
+      if (!mode) return;
+      if (mode === 'node') { const g = document.querySelector('#er-nodes .er-ent.drag'); if (g) g.classList.remove('drag'); if (moved && !ro()) { touch(cur()); save(); bcPos(cur()); st.dragging = null; } else if (moved) { /* read-only */ } else { st.sel = st.sel === node ? null : node; drawNodes(); applySel(); } }
+      else if (!moved) { st.sel = null; drawNodes(); applySel(); }
+      mode = null;
+    };
+    c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up);
+    c.addEventListener('dblclick', e => { if (e.target.closest && e.target.closest('#er-zoom, #er-stats')) return; const g = e.target.closest && e.target.closest('.er-ent'); if (g) { const en = st.model.entities.get(g.dataset.n); if (en && en.line >= 0) gotoLine(en.line); } else fit(); });
+  }
+
+  /* ═════════ EDITOR ═════════ */
+  function highlight(code) {
+    const lines = code.split('\n'); let depth = 0; let html = '';
+    lines.forEach((ln, i) => {
+      let out = ''; let body = ln; let cm = '';
+      let inS = false; for (let k = 0; k < ln.length; k++) { if (ln[k] === '"') inS = !inS; if (!inS && ln[k] === '/' && ln[k + 1] === '/') { body = ln.slice(0, k); cm = ln.slice(k); break; } }
+      const t = body.trim();
+      if (depth > 0 && !t.startsWith('}')) {
+        const lead = body.match(/^\s*/)[0]; const rest = body.slice(lead.length);
+        const mm = rest.match(/^("[^"]*"|\S+)(\s+)?([A-Za-z_][\w]*(?:\([^)]*\))?(?:\[\])?)?(.*)$/);
+        if (mm) {
+          out = esc(lead) + '<span>' + esc(mm[1]) + '</span>' + esc(mm[2] || '') + (mm[3] ? '<span class="p">' + esc(mm[3]) + '</span>' : '') +
+            esc(mm[4] || '').replace(/\b(pk|fk|unique|not null|primary key|foreign key|default|required)\b/gi, '<span class="m">$1</span>').replace(/\[[^\]]*\]/g, s => '<span class="s">' + s + '</span>');
+        } else out = esc(body);
+      } else if (KEYWORDS.test(t) && !t.includes('{')) {
+        out = esc(body).replace(/^(\s*)(\w+)/, '$1<span class="k">$2</span>');
+      } else if (/\{\s*$/.test(t) || t === '}') {
+        out = esc(body).replace(/^(\s*)("[^"]+"|[^\s\[{]+)/, '$1<span class="e">$2</span>').replace(/\[[^\]]*\]/, s => '<span class="s">' + s + '</span>');
+      } else {
+        out = esc(body).replace(/(&lt;&gt;|&lt;|&gt;|\s-\s)/g, '<span class="o">$1</span>').replace(/^(\s*)("[^"]+"|[A-Za-z_][\w]*)/, '$1<span class="e">$2</span>');
+      }
+      const opens = (body.match(/\{/g) || []).length, closes = (body.match(/\}/g) || []).length; depth = Math.max(0, depth + opens - closes);
+      html += out + (cm ? '<span class="c">' + esc(cm) + '</span>' : '') + '\n';
+    });
+    return html + ' ';
+  }
+  function syncEditor() {
+    const ta = $('er-code'); const hl = $('er-hl'); hl.innerHTML = highlight(ta.value);
+    const n = ta.value.split('\n').length; let g = ''; for (let i = 1; i <= n; i++) g += i + '\n'; $('er-gutter').textContent = g;
+    syncScroll();
+  }
+  function syncScroll() { const ta = $('er-code'); $('er-hl').scrollTop = ta.scrollTop; $('er-hl').scrollLeft = ta.scrollLeft; $('er-gutter').scrollTop = ta.scrollTop; }
+  function gotoLine(i) {
+    const ta = $('er-code'); const ls = ta.value.split('\n'); let pos = 0; for (let k = 0; k < i; k++) pos += ls[k].length + 1;
+    ta.focus(); ta.setSelectionRange(pos, pos + (ls[i] || '').length); ta.scrollTop = Math.max(0, i * 20 - ta.clientHeight / 3); syncScroll();
+  }
+  function onCode() {
+    if (ro()) return; syncEditor(); const d = cur(); d.code = $('er-code').value; touch(d); save(); bcLater('code' + d.id, () => bcCode(d), 150);
+    clearTimeout(st.timer); st.timer = setTimeout(() => render(), 220);
+  }
+  function wireEditor() {
+    const ta = $('er-code');
+    ta.addEventListener('input', onCode); ta.addEventListener('scroll', syncScroll);
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Tab') { e.preventDefault(); const s = ta.selectionStart; ta.setRangeText('  ', s, ta.selectionEnd, 'end'); onCode(); }
+      else if (e.key === 'Enter') {
+        e.preventDefault(); const s0 = ta.selectionStart, s1 = ta.selectionEnd; const before = ta.value.slice(0, s0); const ln = before.split('\n').pop(); const ind = ln.match(/^\s*/)[0];
+        const restLine = ta.value.slice(s1).split('\n')[0];
+        if (/\{\s*$/.test(ln) && /^\s*$/.test(restLine) && depthOpen(ta.value) > 0) { ta.setRangeText('\n' + ind + '  \n' + ind + '}', s0, s1, 'preserve'); const p = s0 + 1 + ind.length + 2; ta.setSelectionRange(p, p); }
+        else if (/\{\s*$/.test(ln)) { ta.setRangeText('\n' + ind + '  ', s0, s1, 'end'); }
+        else ta.setRangeText('\n' + ind, s0, s1, 'end');
+        onCode();
+      }
+    });
+  }
+  const depthOpen = s => (s.match(/\{/g) || []).length - (s.match(/\}/g) || []).length;
+  const unbalanced = s => depthOpen(s) > 0;
+
+  /* ═════════ SHARING (receive side) ═════════ */
+  function refreshBadge() { const b = document.getElementById('er-view-btn'); if (b) b.classList.toggle('has', !!(S.er && S.er.diagrams && S.er.diagrams.length)); }
+  function afterRemote(full) {
+    refreshBadge(); ensureCurrent();
+    if (st.active) { refreshPicker(); if (full) { const keep = st.sel; st.remote = true; try { showDiagram(true); } finally { st.remote = false; } } }
+    save();
+  }
+  function setCodeKeepCaret(code) {
+    const ta = $('er-code'); if (ta.value === code) return;
+    const a = ta.selectionStart, b = ta.selectionEnd, f = document.activeElement === ta;
+    ta.value = code; if (f) ta.setSelectionRange(Math.min(a, code.length), Math.min(b, code.length)); syncEditor();
+  }
+  function mergeEr(r, replace) {
+    if (!r || !Array.isArray(r.diagrams)) return; const s = store();
+    if (replace || ro()) { s.diagrams = JSON.parse(JSON.stringify(r.diagrams)); s.del = Object.assign({}, r.del || {}); }
+    else {
+      const del = Object.assign({}, s.del); Object.keys(r.del || {}).forEach(k => { del[k] = Math.max(del[k] || 0, r.del[k]); }); s.del = del;
+      r.diagrams.forEach(rd => {
+        const ld = s.diagrams.find(x => x.id === rd.id);
+        if (!ld) { if (!(del[rd.id] >= (rd.ts || 0))) s.diagrams.push(JSON.parse(JSON.stringify(rd))); }
+        else if ((rd.ts || 0) > (ld.ts || 0)) Object.assign(ld, JSON.parse(JSON.stringify(rd)));
+      });
+      s.diagrams = s.diagrams.filter(d => !(del[d.id] >= (d.ts || 0)));
+    }
+    afterRemote(true);
+  }
+  function onRemote(m) {
+    const s = store(), d = m.id && s.diagrams.find(x => x.id === m.id), here = d && d.id === st.current && st.active;
+    if (m.type === 'er_full') { mergeEr(m.er); return; }
+    if (m.type === 'er_upsert') {
+      if (!m.d || (s.del[m.d.id] >= (m.d.ts || 0))) return;
+      const i = s.diagrams.findIndex(x => x.id === m.d.id); if (i < 0) s.diagrams.push(m.d); else s.diagrams[i] = m.d;
+      afterRemote(m.d.id === st.current); return;
+    }
+    if (m.type === 'er_del') {
+      s.del[m.id] = Math.max(s.del[m.id] || 0, m.ts || Date.now()); s.diagrams = s.diagrams.filter(x => x.id !== m.id);
+      const wasCur = m.id === st.current; if (wasCur) st.current = null; afterRemote(wasCur); return;
+    }
+    if (!d) return;
+    if (m.type === 'er_code') {
+      d.code = m.code; d.ts = Math.max(d.ts || 0, m.ts || 0);
+      if (here) { st.remote = true; try { setCodeKeepCaret(d.code); render(); } finally { st.remote = false; } }
+    } else if (m.type === 'er_pos') {
+      d.pos = Object.assign(d.pos || {}, m.pos || {});
+      if (here && !(st.dragging)) { st.remote = true; try { if (st.model) { drawAll(); } } finally { st.remote = false; } }
+    } else if (m.type === 'er_meta') {
+      d.name = m.name; d.notation = m.notation || d.notation; d.ts = Math.max(d.ts || 0, m.ts || 0);
+      if (st.active) { refreshPicker(); if (here) { if (document.activeElement !== $('er-title')) $('er-title').value = d.name; st.remote = true; try { render(); } finally { st.remote = false; } } }
+    }
+    refreshBadge(); save();
+  }
+  setInterval(refreshBadge, 1500);
+
+  /* ═════════ ACTIONS ═════════ */
+  function refreshPicker() {
+    const p = $('er-picker'); p.innerHTML = ''; diagrams().forEach(d => { const o = document.createElement('option'); o.value = d.id; o.textContent = d.name || 'Untitled'; if (d.id === st.current) o.selected = true; p.appendChild(o); });
+  }
+  function showDiagram(keepView) {
+    const d = cur(); $('er-title').value = d.name || ''; $('er-code').value = d.code; syncEditor(); refreshPicker(); if (!keepView) { st.sel = null; st.fitNext = true; } render();
+  }
+  function setTheme(t) {
+    $('er-app').dataset.theme = t; prefs.theme = t; savePrefs();
+    $('er-theme').innerHTML = t === 'dark'
+      ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+      : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>';
+    if (st.model) drawAll();
+  }
+
+  function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+  function svgString() {
+    const b = bounds(); if (!b) return null; const W = b.x1 - b.x0, H = b.y1 - b.y0, P = pal();
+    const keep = st.sel; st.sel = null; drawEdges(); drawNodes(); const clone = world().cloneNode(true); st.sel = keep; drawAll(); clone.removeAttribute('transform');
+    clone.querySelectorAll('[style]').forEach(n => n.removeAttribute('style'));
+    const defs = document.querySelector('#er-svg defs').outerHTML;
+    return '<svg xmlns="' + NS + '" width="' + W + '" height="' + H + '" viewBox="' + b.x0 + ' ' + b.y0 + ' ' + W + ' ' + H + '"><rect x="' + b.x0 + '" y="' + b.y0 + '" width="' + W + '" height="' + H + '" fill="' + P.bg + '"/>' + defs + clone.outerHTML + '</svg>';
+  }
+
+  window.ERV = {
+    get active() { return st.active; },
+    init() { if (st.inited) return; st.inited = true; loadPrefs(); setTheme(prefs.theme || 'light'); wire(); wireEditor(); wireUI(); },
+    open() {
+      this.init(); load();
+      st.active = true; $('er-app').classList.add('on'); document.body.style.overflow = 'hidden';
+      $('er-app').classList.toggle('ro', ro()); $('er-code').readOnly = ro(); $('er-title').readOnly = ro();
+      $('er-left').style.width = (prefs.split || 400) + 'px';
+      $('er-empty').firstElementChild.innerHTML = ro() ? '<b style="font-size:15px;color:var(--e-text)">No ER diagrams shared yet</b><br>The designer hasn\'t added one to this project.' : '<b style="font-size:15px;color:var(--e-text)">Nothing to draw yet</b><br>Write tables in the code panel, or press Import<br>to bring in SQL, DBML or Eraser code.';
+      showDiagram();
+    },
+    close() { st.active = false; $('er-app').classList.remove('on'); document.body.style.overflow = ''; this.closeModals(); },
+    toggleNew(btn) {
+      const m = $('new-menu'); if (m.classList.contains('on')) { m.classList.remove('on'); return; }
+      const r = btn.getBoundingClientRect(); m.style.left = r.left + 'px'; m.style.top = (r.bottom + 6) + 'px'; m.classList.add('on');
+      setTimeout(() => document.addEventListener('pointerdown', ERV._away, true), 0);
+    },
+    _away(e) { if (!e.target.closest('#new-menu') && !e.target.closest('#new-btn')) { ERV.closeNew(); } },
+    closeNew() { $('new-menu').classList.remove('on'); document.removeEventListener('pointerdown', ERV._away, true); },
+    toggleTheme() { setTheme(theme() === 'dark' ? 'light' : 'dark'); },
+    zoomBy(f) { const c = $('er-canvas'); zoomAt(f, c.clientWidth / 2, c.clientHeight / 2); },
+    fit, 
+    autoLayout() { if (ro()) return; const d = cur(); d.pos = {}; st.fitNext = true; render(); },
+    newDiagram() { if (ro()) return; const d = mk(BLANK, 'Untitled diagram'); diagrams().push(d); st.current = d.id; prefs.current = d.id; savePrefs(); bcUpsert(d); save(); showDiagram(); },
+    deleteDiagram() {
+      if (ro()) return; const d = cur(); if (!d.id) return;
+      if (!confirm('Delete "' + (d.name || 'Untitled') + '"? It is removed for teammates too.')) return;
+      const s = store(), ts = Date.now(); s.del[d.id] = ts; s.diagrams = s.diagrams.filter(x => x.id !== d.id); bc({ type: 'er_del', id: d.id, ts });
+      if (!s.diagrams.length) { const nd = mk(BLANK, 'Untitled diagram'); s.diagrams.push(nd); bcUpsert(nd); }
+      st.current = null; ensureCurrent(); save(); showDiagram();
+    },
+    remote(data) { onRemote(data); }, mergeEr(r, replace) { mergeEr(r, replace); }, refreshBadge,
+    openImport() { $('er-imp-msg').textContent = ''; $('er-imp').classList.add('on'); setTimeout(() => $('er-imp-ta').focus(), 30); },
+    openExport() { $('er-exp').classList.add('on'); },
+    closeModals() { document.querySelectorAll('.er-modal').forEach(m => m.classList.remove('on')); },
+    sample() { $('er-imp-ta').value = 'CREATE TABLE users (\n  id uuid PRIMARY KEY,\n  email text UNIQUE NOT NULL,\n  name text\n);\n\nCREATE TABLE providers (\n  id uuid PRIMARY KEY,\n  user_id uuid UNIQUE REFERENCES users(id),\n  trade varchar(60) NOT NULL\n);\n\nCREATE TABLE tickets (\n  id serial PRIMARY KEY,\n  user_id uuid NOT NULL,\n  provider_id uuid,\n  status text,\n  FOREIGN KEY (user_id) REFERENCES users(id),\n  FOREIGN KEY (provider_id) REFERENCES providers(id)\n);\n'; $('er-imp-fmt').value = 'auto'; },
+    doImport() {
+      if (ro()) return;
+      const msg = $('er-imp-msg'); const raw = $('er-imp-ta').value; if (!raw.trim()) { msg.textContent = 'Paste some code first.'; return; }
+      let fmt = $('er-imp-fmt').value; if (fmt === 'auto') fmt = detectFormat(raw);
+      let code;
+      try { code = fmt === 'sql' ? sqlToModel(raw) : fmt === 'dbml' ? dbmlToCode(raw) : raw.replace(/\s+$/, '') + '\n'; } catch (e) { msg.textContent = 'Could not read that: ' + e.message; return; }
+      if (fmt !== 'eraser' && !/\{/.test(code)) { msg.textContent = 'No tables found. Check the format selector, or paste CREATE TABLE / Table statements.'; return; }
+      const mode = $('er-imp-mode').value; const d = cur();
+      if (mode === 'new' || !d.id) { const nd = mk(code, 'Imported ' + fmt.toUpperCase()); diagrams().push(nd); st.current = nd.id; prefs.current = nd.id; savePrefs(); bcUpsert(nd); }
+      else if (mode === 'append') { d.code = d.code.replace(/\s+$/, '') + '\n\n' + code; touch(d); bcCode(d); }
+      else { d.code = (/^\s*title\b/mi.test(code) ? '' : 'title ' + (d.name || 'Imported') + '\n\n') + code; d.pos = {}; touch(d); bcCode(d); }
+      save(); this.closeModals(); $('er-imp-ta').value = ''; showDiagram();
+    },
+    exportAs(kind) {
+      const d = cur(), name = (d.name || 'diagram').replace(/[^\w.-]+/g, '_');
+      if (kind === 'code') download(name + '.erd', new Blob([d.code], { type: 'text/plain' }));
+      else if (kind === 'sql') download(name + '.sql', new Blob([modelToSql(st.model)], { type: 'text/plain' }));
+      else if (kind === 'copy') { (navigator.clipboard && navigator.clipboard.writeText(d.code) || Promise.resolve()).catch(() => { }); }
+      else if (kind === 'svg') { const s = svgString(); if (s) download(name + '.svg', new Blob([s], { type: 'image/svg+xml' })); }
+      else if (kind === 'png') {
+        const s = svgString(); if (!s) return; const b = bounds(); const W = b.x1 - b.x0, H = b.y1 - b.y0; const img = new Image();
+        img.onload = () => { const cv = document.createElement('canvas'); cv.width = W * 2; cv.height = H * 2; const x = cv.getContext('2d'); x.scale(2, 2); x.drawImage(img, 0, 0, W, H); cv.toBlob(bl => download(name + '.png', bl), 'image/png'); };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+      }
+      this.closeModals();
+    },
+    _t: { parseEraser, sqlToModel, dbmlToCode, detectFormat, modelToSql, autoLayout, st }
+  };
+
+  function wireUI() {
+    $('er-title').addEventListener('input', e => { if (ro()) return; const d = cur(); d.name = e.target.value; touch(d); save(); bcLater('meta' + d.id, () => bcMeta(d), 200); const o = $('er-picker').selectedOptions[0]; if (o) o.textContent = e.target.value || 'Untitled'; });
+    $('er-picker').addEventListener('change', e => { st.current = e.target.value; prefs.current = st.current; savePrefs(); showDiagram(); });
+    document.querySelectorAll('#er-notation button').forEach(b => b.addEventListener('click', () => {
+      if (ro()) return; const d = cur(); d.notation = b.dataset.n; touch(d);
+      // keep the code authoritative: rewrite or insert a `notation` line
+      if (/^\s*notation\b.*$/mi.test(d.code)) d.code = d.code.replace(/^\s*notation\b.*$/mi, 'notation ' + b.dataset.n); else d.code = 'notation ' + b.dataset.n + '\n' + d.code;
+      $('er-code').value = d.code; syncEditor(); save(); bcCode(d); bcMeta(d); render();
+    }));
+    const imp = $('er-imp-drop'), file = $('er-imp-file');
+    $('er-imp-pick').addEventListener('click', e => { e.preventDefault(); file.click(); });
+    const readF = f => { const r = new FileReader(); r.onload = () => { $('er-imp-ta').value = r.result; $('er-imp-fmt').value = 'auto'; const ext = (f.name.split('.').pop() || '').toLowerCase(); if (ext === 'sql') $('er-imp-fmt').value = 'sql'; if (ext === 'dbml') $('er-imp-fmt').value = 'dbml'; }; r.readAsText(f); };
+    file.addEventListener('change', () => { if (file.files[0]) readF(file.files[0]); file.value = ''; });
+    ['dragenter', 'dragover'].forEach(ev => imp.addEventListener(ev, e => { e.preventDefault(); imp.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => imp.addEventListener(ev, e => { e.preventDefault(); imp.classList.remove('over'); }));
+    imp.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) readF(f); });
+    $('er-imp-ta').addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); const t = e.target; t.setRangeText('  ', t.selectionStart, t.selectionEnd, 'end'); } });
+    document.querySelectorAll('.er-modal').forEach(m => m.addEventListener('pointerdown', e => { if (e.target === m) ERV.closeModals(); }));
+    document.addEventListener('keydown', e => {
+      if (!st.active) return;
+      if (e.key === 'Escape') { if (document.querySelector('.er-modal.on')) ERV.closeModals(); else if (st.sel) { st.sel = null; drawNodes(); applySel(); } }
+    });
+    // resizable split
+    const rz = $('er-resizer'); let drag = false;
+    rz.addEventListener('pointerdown', e => { drag = true; rz.setPointerCapture(e.pointerId); });
+    rz.addEventListener('pointermove', e => { if (!drag) return; const w = Math.min(Math.max(240, e.clientX), window.innerWidth - 320); $('er-left').style.width = w + 'px'; prefs.split = w; });
+    rz.addEventListener('pointerup', () => { drag = false; savePrefs(); });
+    window.addEventListener('resize', () => { if (st.active) applyView(); });
+  }
+})();
+
+</script>
 </body>
 
 </html>

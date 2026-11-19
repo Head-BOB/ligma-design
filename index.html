@@ -667,6 +667,12 @@
       display: block;
     }
 
+    .el-frame .fph {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      padding: 40px; text-align: center; background: #ece9e0; color: #8a877d;
+      font: 600 44px/1.2 -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+    }
+
     .el-frame iframe {
       border: none;
       display: block;
@@ -1600,6 +1606,7 @@
     let currentScreenIdx = 0;
 
     let ui = {
+      multi: new Set(), group: null, marq: null, pendingCollapse: null, moved: false,
       tool: 'select', selId: null, selConn: null, clipboard: null,
       isDrag: false, dragEl: null, dox: 0, doy: 0,
       isResize: false, rzHandle: '', rzEl: null,
@@ -1753,6 +1760,7 @@
 
     function renderCamera() {
       CV.style.transform = `translate(${S.camera.x}px,${S.camera.y}px) scale(${S.camera.zoom})`;
+      syncMountsSoon();
       document.getElementById('zoom-lbl').textContent = Math.round(S.camera.zoom * 100) + '%';
       const gs = 20 * S.camera.zoom;
       const ox = S.camera.x % gs, oy = S.camera.y % gs;
@@ -2124,6 +2132,7 @@
       const d = document.getElementById('el-' + id);
       if (d) d.remove();
       if (ui.selId === id) ui.selId = null;
+      ui.multi.delete(id);
       renderConns();
       renderLayers();
       updateProps();
@@ -2155,7 +2164,7 @@
       d.className = 'el el-' + el.type;
       d.id = 'el-' + el.id;
       applyStyle(d, el);
-      if (el.id === ui.selId) d.classList.add('sel');
+      if (el.id === ui.selId || ui.multi.has(el.id)) d.classList.add('sel');
 
       if (el.type === 'frame') {
         const lbl = document.createElement('div');
@@ -2168,18 +2177,13 @@
         d.appendChild(lbl);
 
         if (el.html) {
+          // The live page (iframe) is only mounted while the frame is near the screen, see syncMounts().
+          // Until then the frame shows a light placeholder, so hundreds of screens stay smooth.
           const fi = document.createElement('div');
           fi.className = 'fi';
-          const iframe = document.createElement('iframe');
-          iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
-          iframe.setAttribute('scrolling', 'no');
-          // Explicit pixel size — sets the iframe's own viewport correctly
-          iframe.style.cssText = `width:${el.w}px;height:${el.h}px;border:none;display:block;pointer-events:none;`;
-          const wrapped = wrapHtml(el.html, el.w, el.h);
-          iframe.srcdoc = wrapped;
-          iframe.src = URL.createObjectURL(new Blob([wrapped], { type: 'text/html' }));
-          fi.appendChild(iframe);
+          fi.innerHTML = '<div class="fph">' + esc(el.label || '') + '</div>';
           d.appendChild(fi);
+          syncMountsSoon();
         } else {
           const em = document.createElement('div');
           em.className = 'fempty';
@@ -2219,11 +2223,68 @@
       if (['rect', 'ellipse', 'frame', 'sticky'].includes(el.type)) d.style.background = el.fill || '#fff';
     }
 
+
+    // ═══════════════════════════════════════════════════
+    //  LIVE PAGES ONLY WHERE YOU LOOK
+    //  A frame's iframe is created when it is near the visible canvas and removed when it is far away.
+    //  Zoomed far out, every frame is a light placeholder. Keeps pan, zoom and drag smooth with 100+ screens.
+    // ═══════════════════════════════════════════════════
+    const MOUNT_NEAR = 350, MOUNT_FAR = 1400, MOUNT_MAX = 24, ZOOM_PLACEHOLDER = 0.16;
+    let _msRaf = 0;
+    function syncMountsSoon() { if (!_msRaf) _msRaf = requestAnimationFrame(() => { _msRaf = 0; syncMounts(); }); }
+    function frameSig(el) { const h = el.html || ''; return h.length + ':' + h.slice(0, 40) + h.slice(-40) + ':' + el.w + 'x' + el.h; }
+    function mountFrame(fi, el) {
+      const iframe = document.createElement('iframe');
+      iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms');
+      iframe.setAttribute('scrolling', 'no');
+      iframe.dataset.sig = frameSig(el);
+      iframe.style.cssText = `width:${el.w}px;height:${el.h}px;border:none;display:block;pointer-events:none;`;
+      iframe.srcdoc = wrapHtml(el.html, el.w, el.h);
+      fi.appendChild(iframe);
+      const ph = fi.querySelector('.fph'); if (ph) ph.style.display = 'none';
+    }
+    function unmountFrame(fi) {
+      const ifr = fi.querySelector('iframe'); if (ifr) { ifr.src = 'about:blank'; ifr.remove(); }
+      const ph = fi.querySelector('.fph'); if (ph) ph.style.display = '';
+    }
+    function syncMounts() {
+      if (!CW) return;
+      const W = CW.clientWidth, H = CW.clientHeight, z = S.camera.zoom, cam = S.camera;
+      const low = z < ZOOM_PLACEHOLDER;
+      const want = [];
+      getFrames().forEach(el => {
+        if (!el.html) return;
+        const d = document.getElementById('el-' + el.id); if (!d) return;
+        const fi = d.querySelector('.fi'); if (!fi) return;
+        const has = !!fi.querySelector('iframe');
+        const sx = el.x * z + cam.x, sy = el.y * z + cam.y, sw = el.w * z, sh = el.h * z;
+        const gap = Math.max(-sx - sw, sx - W, -sy - sh, sy - H);   // distance outside the screen, <0 = inside
+        const keep = el.id === ui.selId || (ui.multi && ui.multi.has(el.id) && ui.multi.size < 6);
+        if (!low && (gap < MOUNT_NEAR || keep)) want.push({ el, fi, has, gap: keep ? -1e9 : gap });
+        else if (has && (low || gap > MOUNT_FAR)) unmountFrame(fi);
+      });
+      want.sort((a, b) => a.gap - b.gap);
+      want.forEach((w, i) => {
+        if (i < MOUNT_MAX) { if (!w.has) mountFrame(w.fi, w.el); }
+        else if (w.has) unmountFrame(w.fi);
+      });
+    }
+
     function refreshEl(id) {
       const old = document.getElementById('el-' + id);
       if (!old) return;
       const el = getEl(id);
       if (!el) { old.remove(); return; }
+      // Only moved or restyled? Update in place instead of rebuilding, so the live page keeps running.
+      const ifr = old.querySelector && old.querySelector('iframe');
+      if (el.type === 'frame' && el.html && ifr && ifr.dataset.sig === frameSig(el)) {
+        applyStyle(old, el);
+        const lbl = old.querySelector('.fl'); if (lbl) lbl.textContent = el.label;
+        const ph = old.querySelector('.fph'); if (ph) ph.textContent = el.label || '';
+        old.classList.toggle('sel', !!(ui.multi && ui.multi.has(el.id)) || el.id === ui.selId);
+        syncMountsSoon();
+        return;
+      }
       CV.replaceChild(buildDiv(el), old);
     }
 
@@ -2332,7 +2393,7 @@
       list.innerHTML = '';
       [...S.elements].reverse().forEach(el => {
         const item = document.createElement('div');
-        item.className = 'li' + (el.id === ui.selId ? ' on' : '');
+        item.className = 'li' + (el.id === ui.selId || ui.multi.has(el.id) ? ' on' : '');
         item.innerHTML = `<em class="li-icon">${LICONS[el.type] || '□'}</em><span class="li-name" title="Double-click or right-click to rename">${esc(el.label)}</span><span class="li-vis" onclick="toggleHide(${el.id},event)">${el.hidden ? '—' : '●'}</span>`;
         item.addEventListener('click', () => selEl(el.id));
         item.addEventListener('dblclick', e => {
@@ -2395,7 +2456,7 @@
       const sec = new Map(fr.map(f => [f.id, secOf(f)]));
       if (q) fr = fr.filter(f => (f.label || '').toLowerCase().includes(q));
       if (LP.sort === 'az') fr = [...fr].sort((a, b) => (a.label || '').localeCompare(b.label || '', undefined, { numeric: true, sensitivity: 'base' }));
-      const row = f => `<div class="li lp-s${f.id === ui.selId ? ' on' : ''}" data-id="${f.id}" onclick="lpGo(${f.id})" ondblclick="event.stopPropagation();renameEl(${f.id})" oncontextmenu="event.preventDefault();event.stopPropagation();selEl(${f.id});showCtx(event.clientX,event.clientY)" title="${esc(f.label)} · ${Math.round(f.w)}×${Math.round(f.h)}"><span class="lp-n">${num.get(f.id)}</span>${LP_ICON[lpKind(f)]}<span class="li-name">${esc(f.label)}${LP.sort === 'az' ? `<small class="lp-sub">${esc(sec.get(f.id))}</small>` : ''}</span><span class="li-vis" onclick="toggleHide(${f.id},event)">${f.hidden ? '—' : '●'}</span></div>`;
+      const row = f => `<div class="li lp-s${f.id === ui.selId || ui.multi.has(f.id) ? ' on' : ''}" data-id="${f.id}" onclick="lpGo(${f.id})" ondblclick="event.stopPropagation();renameEl(${f.id})" oncontextmenu="event.preventDefault();event.stopPropagation();selEl(${f.id});showCtx(event.clientX,event.clientY)" title="${esc(f.label)} · ${Math.round(f.w)}×${Math.round(f.h)}"><span class="lp-n">${num.get(f.id)}</span>${LP_ICON[lpKind(f)]}<span class="li-name">${esc(f.label)}${LP.sort === 'az' ? `<small class="lp-sub">${esc(sec.get(f.id))}</small>` : ''}</span><span class="li-vis" onclick="toggleHide(${f.id},event)">${f.hidden ? '—' : '●'}</span></div>`;
       let h = '';
       if (!fr.length) h = `<div class="lp-empty">${all.length ? 'No screens match.' : 'No screens yet.<br>Add a frame, or use Import to bring in your Claude screens.'}</div>`;
       else if (LP.sort === 'az' || q) h = fr.map(row).join('');
@@ -2430,6 +2491,12 @@
     function updateProps() {
       const panel = document.getElementById('prop-p');
       const el = getEl(ui.selId);
+      if (ui.multi.size > 1) {
+        panel.innerHTML = `<div class="ps"><div class="stitle">${ui.multi.size} selected</div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:10px">Drag any of them to move the whole group. Arrow keys nudge. Shift+click adds or removes one.</div>
+          <button class="btn" style="width:100%;color:#f87171" onclick="delSelected()">Delete ${ui.multi.size} elements</button></div>`;
+        return;
+      }
       if (!el) { panel.innerHTML = '<div class="nosel">Select an element<br>to view properties</div>'; return; }
       panel.innerHTML = `
     <div class="ps"><div class="stitle">Element</div>
@@ -2519,24 +2586,50 @@
     function updateSelectionUI() {
       CV.querySelectorAll('.el').forEach(d => {
         const elId = parseInt(d.id.replace('el-', ''));
-        d.classList.toggle('sel', elId === ui.selId);
+        d.classList.toggle('sel', ui.multi.has(elId) || elId === ui.selId);
       });
       renderConns();
       renderLayers();
       updateProps();
+      syncMountsSoon();
     }
 
     function selEl(id) {
-      if (ui.selId === id && ui.selConn === null) return;
+      if (ui.selId === id && ui.selConn === null && ui.multi.size === 1 && ui.multi.has(id)) return;
       ui.selId = id;
       ui.selConn = null;
+      ui.multi = new Set([id]);
       updateSelectionUI();
     }
 
+    // Select several at once (Ctrl/Cmd+A, Shift+click, Shift+drag). The last one is the "primary" shown in the panel.
+    function selMany(ids, primary) {
+      ids = ids.filter(id => getEl(id));
+      ui.multi = new Set(ids);
+      ui.selId = ids.length ? (ids.includes(primary) ? primary : ids[ids.length - 1]) : null;
+      ui.selConn = null;
+      updateSelectionUI();
+    }
+    function toggleSel(id) {
+      const ids = new Set(ui.multi); if (ui.selId !== null) ids.add(ui.selId);
+      if (ids.has(id)) ids.delete(id); else ids.add(id);
+      selMany([...ids], ids.has(id) ? id : undefined);
+    }
+    function selectAll() {
+      selMany(S.elements.filter(e => !e.hidden).map(e => e.id));
+      showToast(ui.multi.size + ' selected');
+    }
+    function delSelected() {
+      const ids = [...ui.multi]; if (!ids.length && ui.selId !== null) ids.push(ui.selId);
+      ids.forEach(id => { delEl(id); broadcast({ type: 'el_del', id }); });
+      ui.multi = new Set(); ui.selId = null; updateSelectionUI();
+    }
+
     function deselAll() {
-      if (ui.selId === null && ui.selConn === null) return;
+      if (ui.selId === null && ui.selConn === null && !ui.multi.size) return;
       ui.selId = null;
       ui.selConn = null;
+      ui.multi = new Set();
       updateSelectionUI();
     }
 
@@ -2545,9 +2638,10 @@
     // ═══════════════════════════════════════════════════
     CW.addEventListener('mousedown', e => {
       if (e.button !== 0 && e.button !== 1) return;
-      const isBg = e.target === CV || e.target.id === 'cbg' || e.target === document.getElementById('asvg');
+      const isBg = e.target === CW || e.target === CV || e.target.id === 'cbg' || e.target.id === 'snap-ov' || e.target.id === 'cursor-ov' || e.target === document.getElementById('asvg');
       if (!isBg) return;
       if (e.button === 1 || e.altKey) { e.preventDefault(); startPan(e); return; }
+      if (ui.tool === 'select' && e.shiftKey) { startMarquee(e); return; }
       if (ui.tool === 'select') { startPan(e); deselAll(); return; }
       if (ui.tool === 'connect') return;
       startDraw(e);
@@ -2558,6 +2652,31 @@
       ui.pcx = S.camera.x; ui.pcy = S.camera.y;
       CW.style.cursor = 'grabbing';
     }
+
+    // ── Shift+drag on empty canvas: box-select ──
+    function startMarquee(e) {
+      const p = s2c(e.clientX, e.clientY);
+      const box = document.createElement('div');
+      box.style.cssText = 'position:absolute;border:1px solid var(--accent);background:rgba(13,153,255,.08);pointer-events:none;z-index:99999;';
+      CV.appendChild(box);
+      ui.marq = { sx: p.x, sy: p.y, box, ids: [] };
+      onMarqueeMove(e);
+    }
+    function onMarqueeMove(e) {
+      const m = ui.marq; if (!m) return;
+      const p = s2c(e.clientX, e.clientY);
+      const x = Math.min(p.x, m.sx), y = Math.min(p.y, m.sy), w = Math.abs(p.x - m.sx), h = Math.abs(p.y - m.sy);
+      m.box.style.left = x + 'px'; m.box.style.top = y + 'px'; m.box.style.width = w + 'px'; m.box.style.height = h + 'px';
+      m.ids = S.elements.filter(el => !el.hidden && el.x < x + w && el.x + el.w > x && el.y < y + h && el.y + el.h > y).map(el => el.id);
+      const set = new Set(m.ids);
+      CV.querySelectorAll('.el').forEach(d => d.classList.toggle('sel', set.has(parseInt(d.id.slice(3)))));
+    }
+    function endMarquee() {
+      const m = ui.marq; if (!m) return;
+      m.box.remove(); ui.marq = null;
+      if (m.ids.length) selMany(m.ids); else deselAll();
+    }
+
     function startDraw(e) {
       const p = s2c(e.clientX, e.clientY);
       ui.isDraw = true; ui.dwsx = p.x; ui.dwsy = p.y;
@@ -2612,10 +2731,14 @@
         }
         return;
       }
-      selEl(id);
+      if (e.shiftKey || e.ctrlKey || e.metaKey) { toggleSel(id); return; }
+      ui.pendingCollapse = null; ui.moved = false;
+      if (ui.multi.size > 1 && ui.multi.has(id)) { ui.pendingCollapse = id; ui.selId = id; }   // keep the group; collapse on click without drag
+      else selEl(id);
       ui.isDrag = true; ui.dragEl = el;
       const p = s2c(e.clientX, e.clientY);
       ui.dox = p.x - el.x; ui.doy = p.y - el.y;
+      ui.group = ui.multi.size > 1 ? [...ui.multi].map(i => getEl(i)).filter(Boolean).map(g => ({ el: g, dx: g.x - el.x, dy: g.y - el.y, d: document.getElementById('el-' + g.id) })) : null;
       CW.style.cursor = 'grabbing';
     }
 
@@ -2686,8 +2809,17 @@
         if (sb) { sb.textContent = `${Math.round(nw)} × ${Math.round(nh)}`; sb.style.display = 'block'; }
         updateProps(); return;
       }
+      if (ui.marq) { onMarqueeMove(e); return; }
+      if (ui.isDrag && ui.dragEl && ui.group) {
+        const p = s2c(e.clientX, e.clientY);
+        const nx = p.x - ui.dox, ny = p.y - ui.doy;
+        ui.moved = true;
+        ui.group.forEach(g => { g.el.x = nx + g.dx; g.el.y = ny + g.dy; if (g.d) { g.d.style.left = g.el.x + 'px'; g.d.style.top = g.el.y + 'px'; } });
+        renderConns(); return;
+      }
       if (ui.isDrag && ui.dragEl) {
         const p = s2c(e.clientX, e.clientY);
+        ui.moved = true;
         ui.dragEl.x = p.x - ui.dox; ui.dragEl.y = p.y - ui.doy;
         const snap = snapEl(ui.dragEl);
         if (snap.sx !== null) ui.dragEl.x = snap.sx;
@@ -2710,6 +2842,7 @@
 
     function onUp(e) {
       clearSnap();
+      if (ui.marq) endMarquee();
       if (ui.isPan) { ui.isPan = false; CW.style.cursor = ui.tool === 'select' ? 'default' : 'crosshair'; }
       if (ui.isResize) {
         ui.isResize = false;
@@ -2723,7 +2856,12 @@
         ui.isDrag = false;
         const sb = document.getElementById('sb-' + ui.dragEl?.id);
         if (sb) sb.style.display = 'none';
-        broadcast({ type: 'el_update', el: { ...ui.dragEl } });
+        if (ui.group) ui.group.forEach(g => broadcast({ type: 'el_update', el: { ...g.el } }));
+        else broadcast({ type: 'el_update', el: { ...ui.dragEl } });
+        ui.group = null;
+        if (ui.pendingCollapse !== null && !ui.moved) selEl(ui.pendingCollapse);
+        ui.pendingCollapse = null;
+        syncMountsSoon();
         ui.dragEl = null;
         CW.style.cursor = ui.tool === 'select' ? 'default' : 'crosshair';
         renderConns(); updateProps();
@@ -2757,28 +2895,32 @@
       }
       if (!inp) {
         const tk = { v: 'select', f: 'frame', r: 'rect', e: 'ellipse', t: 'text', s: 'sticky', c: 'connect' };
-        if (tk[e.key.toLowerCase()]) setTool(tk[e.key.toLowerCase()]);
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && tk[e.key.toLowerCase()]) setTool(tk[e.key.toLowerCase()]);
         if (e.key === 'Delete' || e.key === 'Backspace') {
-          if (ui.selId) { const id = ui.selId; delEl(id); broadcast({ type: 'el_del', id }); e.preventDefault(); }
+          if (ui.multi.size > 1) { delSelected(); e.preventDefault(); }
+          else if (ui.selId) { const id = ui.selId; delEl(id); broadcast({ type: 'el_del', id }); e.preventDefault(); }
           if (ui.selConn) { S.connections = S.connections.filter(c => c.id !== ui.selConn); ui.selConn = null; renderConns(); e.preventDefault(); }
         }
         if (e.key === 'Escape') { deselAll(); setTool('select'); ui.connStart = null; }
         if (e.key === 'F2' && ui.selId) { e.preventDefault(); renameEl(ui.selId); }
         if (ui.selId && e.key.startsWith('Arrow')) {
           e.preventDefault();
-          const el = getEl(ui.selId), d = e.shiftKey ? 10 : 1;
-          if (el) {
+          const d = e.shiftKey ? 10 : 1;
+          const targets = ui.multi.size > 1 ? [...ui.multi].map(getEl).filter(Boolean) : [getEl(ui.selId)].filter(Boolean);
+          targets.forEach(el => {
             if (e.key === 'ArrowLeft') el.x -= d; if (e.key === 'ArrowRight') el.x += d;
             if (e.key === 'ArrowUp') el.y -= d; if (e.key === 'ArrowDown') el.y += d;
-            refreshEl(el.id); renderConns(); updateProps();
+            refreshEl(el.id);
             broadcast({ type: 'el_update', el: { ...el } });
-          }
+          });
+          if (targets.length) { renderConns(); updateProps(); }
         }
       }
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 's') { e.preventDefault(); saveProject(); }
         if (!inp) {
-          if (e.key === 'd') { e.preventDefault(); if (ui.selId) dupEl(ui.selId); }
+          if (e.key === 'a' || e.key === 'A') { e.preventDefault(); selectAll(); }
+          if (e.key === 'd') { e.preventDefault(); if (ui.multi.size > 1) { const ids = [...ui.multi]; ids.forEach(i => dupEl(i)); } else if (ui.selId) dupEl(ui.selId); }
           if (e.key === 'c') copyEl(ui.selId);
           // Ctrl+V is handled by the 'paste' event (it can carry an image from the clipboard)
         }

@@ -437,6 +437,32 @@
       opacity: 1;
     }
 
+
+    /* LEFT: screens list */
+    #lp-tools { padding: 8px 8px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column; gap: 8px; }
+    #lp-tools.off { display: none; }
+    .lp-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 0 9px; color: var(--text2); }
+    .lp-search:focus-within { border-color: var(--accent); }
+    .lp-search input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: var(--text); font: inherit; font-size: 12px; padding: 7px 0; }
+    .lp-row { display: flex; align-items: center; gap: 6px; }
+    .lp-chips { display: flex; gap: 4px; flex: 1; min-width: 0; }
+    .lp-chip { border: 1px solid var(--border); background: transparent; color: var(--text2); border-radius: 12px; padding: 3px 9px; font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+    .lp-chip:hover { color: var(--text); }
+    .lp-chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .lp-chip i { font-style: normal; opacity: .65; margin-left: 4px; font-weight: 500; }
+    #lp-sort { flex-shrink: 0; background: var(--bg); color: var(--text2); border: 1px solid var(--border); border-radius: 7px; font: inherit; font-size: 11px; padding: 6px 4px; outline: 0; }
+    .lp-g { position: sticky; top: -5px; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 9px 6px 5px; margin-top: 2px; background: var(--panel); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text2); cursor: pointer; user-select: none; }
+    .lp-g:hover { color: var(--text); }
+    .lp-g svg { flex-shrink: 0; transition: transform .12s; }
+    .lp-g.shut svg { transform: rotate(-90deg); }
+    .lp-g span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lp-g b { font-weight: 600; opacity: .7; }
+    .lp-s { padding-left: 8px; }
+    .lp-n { width: 20px; flex-shrink: 0; text-align: right; font-size: 10px; opacity: .5; font-variant-numeric: tabular-nums; }
+    .lp-s svg { flex-shrink: 0; opacity: .75; }
+    .lp-sub { display: block; font-size: 10px; opacity: .5; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; }
+    .lp-empty { padding: 22px 12px; text-align: center; font-size: 12px; color: var(--text2); line-height: 1.5; }
+
     /* CANVAS */
     #cw {
       flex: 1;
@@ -1199,6 +1225,7 @@
         <button class="btn" onclick="zoomFit()">Fit</button>
         <div class="tsep edit-only"></div>
         <button class="btn edit-only" onclick="saveProject()">Save</button>
+        <button class="btn edit-only" onclick="openImportModal()" title="Import screens from Claude (zip, folder or .html files)">Import</button>
         <button class="btn edit-only" onclick="showExportModal()">Export</button>
         <button class="tb edit-only" data-tip="Settings" onclick="openSettings()">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.4">
@@ -1214,8 +1241,21 @@
       <!-- LEFT -->
       <div id="left">
         <div class="ptabs">
-          <div class="ptab on" onclick="switchTab(this)">Layers</div>
-          <div class="ptab" onclick="switchTab(this)">Assets</div>
+          <div class="ptab on" data-tab="screens" onclick="switchTab(this)">Screens</div>
+          <div class="ptab" data-tab="layers" onclick="switchTab(this)">Layers</div>
+        </div>
+        <div id="lp-tools">
+          <div class="lp-row">
+            <div class="lp-search">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="6" cy="6" r="4.2" /><path d="M9.2 9.2L12.5 12.5" /></svg>
+              <input id="lp-q" placeholder="Search screens" autocomplete="off" oninput="lpSet('q',this.value)">
+            </div>
+            <select id="lp-sort" onchange="lpSet('sort',this.value)" title="Sort screens">
+              <option value="order">In order</option>
+              <option value="az">A to Z</option>
+            </select>
+          </div>
+          <div class="lp-chips" id="lp-chips"></div>
         </div>
         <div class="pcontent" id="layers"></div>
       </div>
@@ -1401,6 +1441,48 @@
       <div class="ma">
         <button class="btn" onclick="closeExpModal()">Cancel</button>
         <button class="btn p" onclick="doExport()">Export</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Import Modal -->
+  <div id="imp-modal" class="mb" style="display:none">
+    <div class="mo" style="width:540px">
+      <h2>Import screens</h2>
+      <p style="font-size:12px;color:var(--text2);margin:-4px 0 12px;line-height:1.5">
+        Drop a Claude export (.zip or a folder) or several .html files. Every screen becomes a frame, placed in
+        order, with its animations, fonts and colours intact. If the export has a <b>canvas.json</b>, the layout and
+        order from Claude are kept.
+      </p>
+      <div id="imp-drop"
+        style="border:1.5px dashed var(--border);border-radius:10px;padding:22px 14px;text-align:center;background:var(--panel2);font-size:12px;color:var(--text2);line-height:1.6">
+        Drop files or a folder here<br>
+        <span style="display:inline-flex;gap:8px;margin-top:10px">
+          <button class="btn" onclick="document.getElementById('imp-files').click()">Choose files / .zip</button>
+          <button class="btn" onclick="document.getElementById('imp-folder').click()">Choose folder</button>
+        </span>
+      </div>
+      <input type="file" id="imp-files" multiple accept=".zip,.html,.htm,.json" style="display:none">
+      <input type="file" id="imp-folder" webkitdirectory multiple style="display:none">
+      <div id="imp-sum" style="margin:12px 0 4px;font-size:12px;color:var(--text);line-height:1.6;min-height:18px"></div>
+      <div class="mor"><label>If screens already exist</label>
+        <select id="imp-mode">
+          <option value="update">Update by name, add the new ones</option>
+          <option value="add">Add everything as new frames</option>
+          <option value="replace">Replace the whole canvas</option>
+        </select>
+      </div>
+      <div class="mor"><label>Layout</label>
+        <select id="imp-layout">
+          <option value="canvas">Keep Claude's canvas layout (if there is one)</option>
+          <option value="row">One row, in order</option>
+          <option value="grid">Grid, 8 per row, in order</option>
+        </select>
+      </div>
+      <div class="ma">
+        <button class="btn" onclick="closeImportModal()">Cancel</button>
+        <button class="btn p" id="imp-go" onclick="runImport()" disabled>Import</button>
       </div>
     </div>
   </div>
@@ -1926,7 +2008,7 @@
   <div id="keys-tip">Use Left and Right arrow keys to navigate</div>
 
   <script>
-    const FRAMES = ${JSON.stringify(framesData)};
+    const FRAMES = ${JSON.stringify(framesData).replace(/</g, '\\u003c')};
     let cur = 0;
     let mode = 'fit';
 
@@ -2245,7 +2327,7 @@
     //  LAYERS
     // ═══════════════════════════════════════════════════
     const LICONS = { frame: '▭', rect: '▬', ellipse: '◯', text: 'T', sticky: '▪' };
-    function renderLayers() {
+    function lpRenderFlat() {
       const list = document.getElementById('layers');
       list.innerHTML = '';
       [...S.elements].reverse().forEach(el => {
@@ -2265,6 +2347,70 @@
         });
         list.appendChild(item);
       });
+    }
+    // ── Left panel: Screens (grouped, filterable) and Layers (everything, flat) ──
+    const LP = { tab: 'screens', kind: 'all', sort: 'order', q: '', shut: {} };
+    try { Object.assign(LP, JSON.parse(localStorage.getItem('ligmadesign_lp') || '{}'), { q: '', tab: 'screens' }); } catch (e) { }
+    const lpSave = () => { try { localStorage.setItem('ligmadesign_lp', JSON.stringify({ kind: LP.kind, sort: LP.sort, shut: LP.shut })); } catch (e) { } };
+    const lpKind = f => (f.w >= 700 ? 'web' : 'mobile');
+    const LP_ICON = {
+      mobile: '<svg width="10" height="12" viewBox="0 0 10 14" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="1" width="8" height="12" rx="2"/><path d="M4 11h2" stroke-linecap="round"/></svg>',
+      web: '<svg width="13" height="12" viewBox="0 0 14 13" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="1" y="1.5" width="12" height="8" rx="1.6"/><path d="M4.5 12h5M7 9.5V12" stroke-linecap="round"/></svg>'
+    };
+    function lpSet(k, v) {
+      LP[k] = v; if (k !== 'q') lpSave();
+      const sel = document.getElementById('lp-sort'); if (sel) sel.value = LP.sort;
+      renderLayers();
+    }
+    function lpToggle(name) { LP.shut[name] = !LP.shut[name]; lpSave(); renderLayers(); }
+    function lpGo(id) {
+      const el = getEl(id); if (!el) return;
+      const idx = getFrames().findIndex(f => f.id === id);
+      if (idx >= 0) currentScreenIdx = idx;
+      selEl(id); centerOnElement(el);
+    }
+    function lpTools(frames) {
+      const n = { all: frames.length, mobile: frames.filter(f => lpKind(f) === 'mobile').length, web: frames.filter(f => lpKind(f) === 'web').length };
+      const chips = document.getElementById('lp-chips');
+      chips.innerHTML = [['all', 'All'], ['mobile', 'Mobile'], ['web', 'Web']]
+        .filter(([k]) => k === 'all' || n[k] > 0)
+        .map(([k, t]) => `<button class="lp-chip${LP.kind === k ? ' on' : ''}" onclick="lpSet('kind','${k}')">${t}<i>${n[k]}</i></button>`).join('');
+      document.getElementById('lp-sort').value = LP.sort;
+    }
+    function renderLayers() {
+      const list = document.getElementById('layers');
+      const tools = document.getElementById('lp-tools');
+      if (!list) return;
+      tools.classList.toggle('off', LP.tab !== 'screens');
+      if (LP.tab !== 'screens') { lpRenderFlat(); return; }
+      const keep = list.scrollTop;
+      const all = getFrames();
+      const num = new Map(all.map((f, i) => [f.id, i + 1]));
+      const heads = S.elements.filter(e => e.type === 'text' && !e.hidden);
+      const secOf = f => { let b = null; heads.forEach(t => { if (t.y <= f.y + 10 && (!b || t.y > b.y || (t.y === b.y && t.x > b.x))) b = t; }); return b ? (b.text || b.label || 'Section') : 'Other screens'; };
+      lpTools(all);
+      if (LP.kind !== 'all' && !all.some(f => lpKind(f) === LP.kind)) LP.kind = 'all';
+      const q = LP.q.trim().toLowerCase();
+      let fr = all.filter(f => (LP.kind === 'all' || lpKind(f) === LP.kind));
+      const sec = new Map(fr.map(f => [f.id, secOf(f)]));
+      if (q) fr = fr.filter(f => (f.label || '').toLowerCase().includes(q));
+      if (LP.sort === 'az') fr = [...fr].sort((a, b) => (a.label || '').localeCompare(b.label || '', undefined, { numeric: true, sensitivity: 'base' }));
+      const row = f => `<div class="li lp-s${f.id === ui.selId ? ' on' : ''}" data-id="${f.id}" onclick="lpGo(${f.id})" ondblclick="event.stopPropagation();renameEl(${f.id})" oncontextmenu="event.preventDefault();event.stopPropagation();selEl(${f.id});showCtx(event.clientX,event.clientY)" title="${esc(f.label)} · ${Math.round(f.w)}×${Math.round(f.h)}"><span class="lp-n">${num.get(f.id)}</span>${LP_ICON[lpKind(f)]}<span class="li-name">${esc(f.label)}${LP.sort === 'az' ? `<small class="lp-sub">${esc(sec.get(f.id))}</small>` : ''}</span><span class="li-vis" onclick="toggleHide(${f.id},event)">${f.hidden ? '—' : '●'}</span></div>`;
+      let h = '';
+      if (!fr.length) h = `<div class="lp-empty">${all.length ? 'No screens match.' : 'No screens yet.<br>Add a frame, or use Import to bring in your Claude screens.'}</div>`;
+      else if (LP.sort === 'az' || q) h = fr.map(row).join('');
+      else {
+        const groups = [], map = {};
+        fr.forEach(f => { const g = sec.get(f.id); if (!map[g]) { map[g] = []; groups.push(g); } map[g].push(f); });
+        h = groups.map(g => {
+          const shut = !!LP.shut[g] && !q;
+          return `<div class="lp-g${shut ? ' shut' : ''}" onclick="lpToggle(this.dataset.g)" data-g="${esc(g)}"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2 3.5L5 6.5 8 3.5"/></svg><span>${esc(g)}</span><b>${map[g].length}</b></div>` + (shut ? '' : map[g].map(row).join(''));
+        }).join('');
+      }
+      list.innerHTML = h;
+      list.scrollTop = keep;
+      const on = list.querySelector('.li.on');
+      if (on) { const r = on.getBoundingClientRect(), lr = list.getBoundingClientRect(); if (r.top < lr.top + 28 || r.bottom > lr.bottom) on.scrollIntoView({ block: 'nearest' }); }
     }
     function toggleHide(id, e) {
       e.stopPropagation();
@@ -2965,6 +3111,281 @@
       showToast('Downloaded: ' + n);
     }
 
+
+    // ═══════════════════════════════════════════════════
+    //  IMPORT  (Claude Design export -> frames, in order)
+    //  Accepts: a .zip, a folder, several .html / .dc.html files, or a .ligmadesign.json project.
+    //  An optional canvas.json (from the Claude canvas) gives titles, order and positions.
+    // ═══════════════════════════════════════════════════
+    const IMP = { entries: [], model: null };
+
+    function openImportModal() {
+      IMP.entries = []; IMP.model = null;
+      document.getElementById('imp-sum').textContent = '';
+      document.getElementById('imp-go').disabled = true;
+      document.getElementById('imp-modal').style.display = 'flex';
+    }
+    function closeImportModal() { document.getElementById('imp-modal').style.display = 'none'; }
+
+    // Minimal zip reader (stored + deflate) using the browser's DecompressionStream.
+    async function impUnzip(buf) {
+      const u8 = new Uint8Array(buf), dv = new DataView(buf);
+      let e = -1;
+      for (let i = u8.length - 22; i >= Math.max(0, u8.length - 66000); i--) {
+        if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; }
+      }
+      if (e < 0) throw new Error('That zip file looks damaged');
+      const n = dv.getUint16(e + 10, true);
+      let p = dv.getUint32(e + 16, true);
+      const out = [], td = new TextDecoder();
+      for (let k = 0; k < n; k++) {
+        if (dv.getUint32(p, true) !== 0x02014b50) break;
+        const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
+        const nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true);
+        const lho = dv.getUint32(p + 42, true);
+        const name = td.decode(u8.subarray(p + 46, p + 46 + nl));
+        p += 46 + nl + xl + cl;
+        if (name.endsWith('/') || /(^|\/)__MACOSX\//.test(name) || /(^|\/)\.DS_Store$/.test(name)) continue;
+        const start = lho + 30 + dv.getUint16(lho + 26, true) + dv.getUint16(lho + 28, true);
+        const raw = u8.subarray(start, start + csize);
+        let data;
+        if (method === 0) data = raw;
+        else if (method === 8) data = new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
+        else continue;
+        out.push({ path: name, data });
+      }
+      return out;
+    }
+
+    async function impReadFile(f, relPath) {
+      const buf = await f.arrayBuffer();
+      if (/\.zip$/i.test(f.name)) return impUnzip(buf);
+      return [{ path: relPath || f.webkitRelativePath || f.name, data: new Uint8Array(buf) }];
+    }
+
+    // Walk a dropped folder (DataTransferItem entries)
+    function impWalk(entry, base) {
+      return new Promise(resolve => {
+        if (entry.isFile) {
+          entry.file(f => impReadFile(f, base + entry.name).then(resolve, () => resolve([])), () => resolve([]));
+        } else if (entry.isDirectory) {
+          const rd = entry.createReader(), all = [];
+          const next = () => rd.readEntries(async list => {
+            if (!list.length) {
+              const parts = await Promise.all(all.map(c => impWalk(c, base + entry.name + '/')));
+              resolve(parts.flat());
+            } else { all.push(...list); next(); }
+          }, () => resolve([]));
+          next();
+        } else resolve([]);
+      });
+    }
+
+    async function impAddFiles(entriesPromise) {
+      const sum = document.getElementById('imp-sum');
+      sum.textContent = 'Reading files…';
+      try {
+        const got = await entriesPromise;
+        IMP.entries = IMP.entries.concat(got);
+        impAnalyse();
+      } catch (e) { sum.textContent = 'Could not read that: ' + e.message; }
+    }
+
+    (function () {
+      const drop = document.getElementById('imp-drop');
+      ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.style.borderColor = 'var(--accent)'; }));
+      ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.style.borderColor = 'var(--border)'; }));
+      drop.addEventListener('drop', e => {
+        const items = [...(e.dataTransfer.items || [])];
+        const ents = items.map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+        if (ents.length) impAddFiles(Promise.all(ents.map(en => impWalk(en, ''))).then(a => a.flat()));
+        else impAddFiles(Promise.all([...e.dataTransfer.files].map(f => impReadFile(f))).then(a => a.flat()));
+      });
+      document.getElementById('imp-files').addEventListener('change', e => {
+        impAddFiles(Promise.all([...e.target.files].map(f => impReadFile(f))).then(a => a.flat())); e.target.value = '';
+      });
+      document.getElementById('imp-folder').addEventListener('change', e => {
+        impAddFiles(Promise.all([...e.target.files].map(f => impReadFile(f))).then(a => a.flat())); e.target.value = '';
+      });
+    })();
+
+    const impBase = p => p.split('/').pop();
+    const impText = d => new TextDecoder().decode(d);
+    const impNat = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    const IMP_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', woff2: 'font/woff2' };
+
+    // Turn the picked files into: screens (ordered), canvas notes, or a ready-made Ligma project
+    function impAnalyse() {
+      const sum = document.getElementById('imp-sum');
+      const ents = IMP.entries;
+      // 1) a native Ligma project?
+      const pj = ents.find(e => /\.json$/i.test(e.path) && !/(^|\/)canvas\.json$/i.test(e.path));
+      if (pj && !ents.some(e => /\.html?$/i.test(e.path))) {
+        try {
+          const d = JSON.parse(impText(pj.data));
+          if (d.S && Array.isArray(d.S.elements)) {
+            IMP.model = { project: d.S };
+            sum.innerHTML = 'Ligma project: <b>' + d.S.elements.filter(e => e.type === 'frame').length + ' frames</b>.';
+            document.getElementById('imp-go').disabled = false; return;
+          }
+        } catch (e) { }
+      }
+      // 2) html screens (+ optional canvas.json)
+      let cj = null;
+      const cje = ents.find(e => /(^|\/)canvas\.json$/i.test(e.path));
+      if (cje) { try { cj = JSON.parse(impText(cje.data)); } catch (e) { } }
+      let pages = ents.filter(e => /\.html?$/i.test(e.path) && !/(^|\/)(index|support)\.html?$/i.test(e.path) || (/(^|\/)index\.html?$/i.test(e.path) && !cj && ents.filter(x => /\.html?$/i.test(x.path)).length === 1));
+      const byBase = {}; pages.forEach(p => { byBase[impBase(p.path)] = p; });
+      let order;
+      if (cj && cj.boards) {
+        order = (cj.order || []).filter(n => byBase[n]);
+        Object.keys(cj.boards).sort(impNat).forEach(n => { if (byBase[n] && !order.includes(n)) order.push(n); });
+        Object.keys(byBase).sort(impNat).forEach(n => { if (!order.includes(n)) order.push(n); });
+      } else order = Object.keys(byBase).sort(impNat);
+      if (!order.length) {
+        IMP.model = null; document.getElementById('imp-go').disabled = true;
+        sum.textContent = ents.length ? 'No .html screens found in those files.' : ''; return;
+      }
+      const notes = cj && cj.notes ? Object.values(cj.notes) : [];
+      IMP.model = { order, byBase, cj };
+      sum.innerHTML = '<b>' + order.length + ' screens</b> found' + (cj && cj.boards ? ' with the canvas layout' + (notes.length ? ' and ' + notes.length + ' labels' : '') : ' (no canvas.json, so they will be sorted by file name)') + '.<br><span style="color:var(--text2)">' + esc(order.slice(0, 4).map(n => n.replace(/\.(dc\.)?html?$/i, '')).join(', ')) + (order.length > 4 ? ' …' : '') + '</span>';
+      document.getElementById('imp-go').disabled = false;
+    }
+
+    // Swap /_blob/<hash> or relative asset links for data: URIs when the file is in the export
+    function impInlineAssets(html, pagePath) {
+      const dir = pagePath.includes('/') ? pagePath.replace(/[^/]*$/, '') : '';
+      const find = ref => {
+        const clean = ref.replace(/^\.?\//, '');
+        const hash = (clean.match(/^_blob\/([a-f0-9]+)/) || [])[1];
+        return IMP.entries.find(e => hash ? e.path.includes(hash) : (e.path === dir + clean || e.path.endsWith('/' + clean) || e.path === clean));
+      };
+      const toUri = e => {
+        const ext = (e.path.split('.').pop() || '').toLowerCase(), mime = IMP_MIME[ext];
+        if (!mime || ext === 'woff2' || e.data.length > 3e6) return null;
+        let b = ''; const ch = 0x8000;
+        for (let i = 0; i < e.data.length; i += ch) b += String.fromCharCode.apply(null, e.data.subarray(i, i + ch));
+        return 'data:' + mime + ';base64,' + btoa(b);
+      };
+      return html.replace(/(src=|href=|url\()(["']?)(\/?_blob\/[a-f0-9]+|(?:\.\/)?[\w\-./]+\.(?:png|jpe?g|gif|webp|svg))\2/gi, (m, a, q, ref) => {
+        const e = find(ref); const uri = e && toUri(e);
+        return uri ? a + q + uri + q : m;
+      });
+    }
+
+    // Claude's .dc.html -> a normal standalone page (same pixels, same CSS animations)
+    function impFlatten(raw, pagePath) {
+      let title = '', pw = null, ph = null, html = raw, removedFonts = false;
+      if (/<x-dc[\s>]/i.test(raw)) {
+        const doc = new DOMParser().parseFromString(raw, 'text/html');
+        title = (doc.title || '').trim();
+        const sc = doc.querySelector('script[data-dc-script]');
+        if (sc) { try { const p = JSON.parse(sc.getAttribute('data-props') || '{}'); if (p.$preview) { pw = p.$preview.width; ph = p.$preview.height; } } catch (e) { } }
+        const dc = doc.querySelector('x-dc');
+        let head = '', body = '';
+        doc.head.querySelectorAll('style,link[rel="stylesheet"]').forEach(n => head += n.outerHTML);
+        const hel = dc.querySelector('helmet');
+        if (hel) hel.querySelectorAll('style,link[rel="stylesheet"]').forEach(n => head += n.outerHTML);
+        dc.childNodes.forEach(n => {
+          if (n.nodeType === 1) { const t = n.tagName; if (t === 'HELMET' || t === 'SCRIPT') return; body += n.outerHTML; }
+          else if (n.nodeType === 3) body += n.textContent;
+        });
+        html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>' + head +
+          '<style>html,body{margin:0;height:100%}</style></head><body>' + body + '</body></html>';
+      }
+      // the SVG attributes the Claude canvas writes in a special form
+      html = html.replace(/\bsc-camel-([a-z-]+)=/g, (m, n) => n.replace(/-([a-z])/g, (x, c) => c.toUpperCase()) + '=');
+      // Inter was served from the artifact's private storage; use the public font instead
+      const before = html.length;
+      html = html.replace(/(\/\*[^*]*\*\/\s*)*@font-face\s*\{[^}]*\/_blob\/[^}]*\}\s*/g, '');
+      removedFonts = html.length !== before;
+      html = impInlineAssets(html, pagePath);
+      if (removedFonts && !/fonts\.googleapis\.com\/css2\?family=Inter/.test(html)) {
+        html = html.replace(/<\/head>/i, '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" media="print" onload="this.media=\'all\'"></head>');
+      }
+      if (!pw) { const m = html.match(/<meta[^>]*name=["']viewport["'][^>]*content=["'][^"']*width=(\d+)/i); if (m) pw = +m[1]; }
+      return { html, title, pw, ph };
+    }
+
+
+    // After an import, land on the first row of screens (a fit-everything view would be unreadably small)
+    function impViewStart() {
+      const fr = getFrames();
+      if (!fr.length) { zoomFit(); return; }
+      const first = fr[0];
+      const row = fr.filter(f => Math.abs(f.y - first.y) < 20 && f.x >= first.x).slice(0, 5);
+      const x0 = Math.min(...row.map(f => f.x)), x1 = Math.max(...row.map(f => f.x + f.w));
+      const y0 = first.y, y1 = Math.max(...row.map(f => f.y + f.h));
+      const wr = CW.getBoundingClientRect(), pad = 70;
+      const z = Math.min(1, (wr.width - pad * 2) / (x1 - x0), (wr.height - pad * 2) / (y1 - y0));
+      S.camera = { x: (wr.width - (x1 - x0) * z) / 2 - x0 * z, y: (wr.height - (y1 - y0) * z) / 2 - y0 * z, zoom: z };
+      renderCamera();
+    }
+
+    function runImport() {
+      const M = IMP.model; if (!M) return;
+      const mode = document.getElementById('imp-mode').value;
+      const layout = document.getElementById('imp-layout').value;
+      const go = document.getElementById('imp-go'); go.disabled = true; go.textContent = 'Importing…';
+      setTimeout(() => {
+        try {
+          let made = 0, updated = 0;
+          if (mode === 'replace') { S.elements = []; S.connections = []; document.querySelectorAll('#cv .el').forEach(d => d.remove()); }
+          // A native Ligma project
+          if (M.project) {
+            const idMap = {}, off = (mode !== 'replace' && S.elements.length) ? Math.max(...S.elements.map(e => e.x + e.w)) + 200 : 0;
+            M.project.elements.forEach(e => { const c = { ...e, id: _id(), x: e.x + off, zIndex: S.elements.length + 1 }; idMap[e.id] = c.id; S.elements.push(c); made++; });
+            (M.project.connections || []).forEach(c => { if (idMap[c.from] && idMap[c.to]) S.connections.push({ id: _id(), from: idMap[c.from], to: idMap[c.to] }); });
+            if (mode === 'replace' && M.project.projectName) S.projectName = M.project.projectName;
+          } else {
+            const cj = M.cj, boards = (cj && cj.boards) || {};
+            const useCanvas = layout === 'canvas' && cj && Object.keys(boards).length;
+            const off = (mode !== 'replace' && S.elements.length) ? Math.max(...S.elements.map(e => e.x + e.w)) + 240 : 0;
+            let cx = 0, cy = 0, rowH = 0, col = 0;
+            const frames = [];
+            M.order.forEach(name => {
+              const page = M.byBase[name], b = boards[name] || {};
+              const flat = impFlatten(impText(page.data), page.path);
+              const w = Math.round(b.w || flat.pw || 390), h = Math.round(b.h || flat.ph || 844);
+              const label = b.title || flat.title || name.replace(/\.(dc\.)?html?$/i, '').replace(/^\d+[a-z]?\d*-/i, '').replace(/-/g, ' ');
+              let x, y;
+              if (useCanvas && b.x !== undefined) { x = b.x + off; y = (b.y || 0); }
+              else if (layout === 'grid') {
+                if (col === 8) { col = 0; cx = 0; cy += rowH + 120; rowH = 0; }
+                x = cx + off; y = cy; cx += w + 70; rowH = Math.max(rowH, h); col++;
+              } else { x = cx + off; y = 0; cx += w + 70; }
+              frames.push({ name, label, w, h, x, y, html: flat.html });
+            });
+            // reading order = row by row, left to right, so Present and the Screens list follow what you see
+            if (useCanvas) frames.sort((a, b) => Math.abs(a.y - b.y) > 20 ? a.y - b.y : a.x - b.x);
+            frames.forEach(f => {
+              const ex = mode === 'update' ? S.elements.find(e => e.type === 'frame' && (e.srcFile === f.name || (!e.srcFile && e.label === f.label))) : null;
+              if (ex) { ex.html = f.html; ex.w = f.w; ex.h = f.h; ex.label = f.label; ex.srcFile = f.name; updated++; }
+              else { mkEl('frame', f.x, f.y, f.w, f.h, { html: f.html, label: f.label, srcFile: f.name }); made++; }
+            });
+            // Row titles and notes from the canvas become text / sticky elements (not part of the screen order)
+            if (useCanvas && cj.notes) {
+              Object.values(cj.notes).forEach(n => {
+                if (!n || !n.text) return;
+                const exists = S.elements.find(e => e.srcNote && e.text === n.text && e.type !== 'frame');
+                if (exists) return;
+                if (n.kind === 'title1') mkEl('text', n.x + off, n.y, n.maxW || 900, 44, { text: n.text, fill: '#e8e8ea', fontSize: 30, fontWeight: '700', label: n.text, srcNote: true });
+                else mkEl('sticky', n.x + off, n.y, n.w || 220, 130, { text: n.text, label: 'Note', srcNote: true });
+              });
+            }
+            if (cj && cj.title && (mode === 'replace' || S.projectName === 'My Project')) S.projectName = cj.title;
+          }
+          closeImportModal();
+          renderAll(); impViewStart();
+          const ok = saveProject();
+          const openConns = typeof conns !== 'undefined' ? conns.filter(c => c && c.open) : [];
+          if (openConns.length) syncCanvasToAll();
+          if (ok) showToast('Imported ' + made + ' new' + (updated ? ', updated ' + updated : '') + ' screen' + (made + updated === 1 ? '' : 's'));
+        } catch (e) { console.error(e); alert('Import failed: ' + e.message); }
+        go.disabled = false; go.textContent = 'Import';
+      }, 30);
+    }
+
     // ═══════════════════════════════════════════════════
     //  SETTINGS & TEAM USERS
     // ═══════════════════════════════════════════════════
@@ -3046,6 +3467,7 @@
     function switchTab(t) {
       document.querySelectorAll('.ptab').forEach(x => x.classList.remove('on'));
       t.classList.add('on');
+      if (t.dataset.tab) { LP.tab = t.dataset.tab; renderLayers(); }
     }
 
     // ═══════════════════════════════════════════════════
